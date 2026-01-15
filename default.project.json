@@ -1,0 +1,98 @@
+{
+    "name": "The Next Vessel",
+    "tree": {
+        "$className": "DataModel",
+        "Workspace": {
+            "$className": "Workspace",
+            "$ignoreUnknownInstances": true,
+            "Temporal": {
+                "$className": "Folder",
+                "$ignoreUnknownInstances": true
+            },
+            "Debris": {
+                "$className": "Folder",
+                "$ignoreUnknownInstances": true
+            }
+        },
+        "Lighting": {
+            "$className": "Lighting",
+            "$ignoreUnknownInstances": true,
+            "Blur": {
+                "$className": "BlurEffect",
+                "$ignoreUnknownInstances": true,
+                "$properties": {
+                    "Size": 0
+                }
+            },
+            "ColorCorrection": {
+                "$className": "ColorCorrectionEffect",
+                "$ignoreUnknownInstances": true
+            }
+        },
+        "ReplicatedFirst": {
+            "$className": "ReplicatedFirst",
+            "$ignoreUnknownInstances": true,
+            "GlobalFirstShared": {
+                "$path": "src/Global/FirstShared"
+            },
+            "FirstShared": {
+                "$path": "src/Game/FirstShared"
+            }
+        },
+        "ReplicatedStorage": {
+            "Animations": {
+                "$className": "Folder",
+                "$ignoreUnknownInstances": true
+            },
+            "Shared": {
+                "$ignoreUnknownInstances": true,
+                "$path": "src/Shared"
+            },
+            "Types": {
+                "$path": "src/Types"
+            },
+            "Events": {
+                "$className": "Folder",
+                "$ignoreUnknownInstances": true,
+                "Test": {
+                    "$className": "RemoteEvent",
+                    "$ignoreUnknownInstances": true
+                }
+            }
+        },
+        "ServerScriptService": {
+            "$ignoreUnknownInstances": true,
+            "Server": {
+                "$ignoreUnknownInstances": true,
+                "$path": "src/Server"
+            }
+        },
+        "StarterPlayer": {
+            "$ignoreUnknownInstances": true,
+            "StarterPlayerScripts": {
+                "$ignoreUnknownInstances": true,
+                "Client": {
+                    "$ignoreUnknownInstances": true,
+                    "$path": "src/Client"
+                }
+            }
+        },
+        "SoundService": {
+            "$className": "SoundService",
+            "$ignoreUnknownInstances": true,
+            "Effects": {
+                "$className": "SoundGroup",
+                "$ignoreUnknownInstances": true
+            },
+            "Music": {
+                "$className": "SoundGroup",
+                "$ignoreUnknownInstances": true
+            },
+            "UI": {
+                "$className": "SoundGroup",
+                "$ignoreUnknownInstances": true
+            }
+        }
+    }
+}
+
