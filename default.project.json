@@ -32,17 +32,17 @@
         "ReplicatedFirst": {
             "$className": "ReplicatedFirst",
             "$ignoreUnknownInstances": true,
-            "GlobalFirstShared": {
-                "$path": "src/Global/FirstShared"
-            },
             "FirstShared": {
-                "$path": "src/Game/FirstShared"
+                "$path": "src/FirstShared"
             }
         },
         "ReplicatedStorage": {
             "Animations": {
                 "$className": "Folder",
                 "$ignoreUnknownInstances": true
+            },
+            "Packages": {
+                "$path": "roblox_packages"
             },
             "Shared": {
                 "$ignoreUnknownInstances": true,
@@ -95,4 +95,3 @@
         }
     }
 }
-

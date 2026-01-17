@@ -1,0 +1,116 @@
+graph TD
+    %% Global Styles
+    classDef hero fill:#2b2b2b,stroke:#fff,stroke-width:2px,color:#fff;
+    classDef dk fill:#5a0000,stroke:#f00,stroke-width:2px,color:#fff;
+    classDef white fill:#e0e0e0,stroke:#333,stroke-width:1px,color:#000;
+    classDef red fill:#ff4d4d,stroke:#333,stroke-width:2px,color:#000;
+    classDef action fill:#000,stroke:#ff0,stroke-width:1px,color:#fff,stroke-dasharray: 5 5;
+
+    subgraph Scene1 ["Scene 1: The Beginning"]
+        S1_Start(Enter Throne Room) --> H1_0[First_Hero_0]:::hero
+        H1_0 --> DK1_0[First_DemonKing_0]:::dk
+        DK1_0 --> S1_Action("Trident Throw / Scripted Death"):::action
+        
+        S1_Action --> H1_Death["First_Hero_1..3"]:::hero
+        H1_Death --> SoulRealm1(Soul Realm):::white
+        
+        SoulRealm1 --> W1_0["First_White_0..3"]:::white
+        W1_0 --> Choice1{"Pick Wish:<br/>Deflect or Dodge"}
+        Choice1 --> W1_4[First_White_4]:::white
+    end
+
+    W1_4 --> Scene2
+
+    subgraph Scene2 ["Scene 2: The First Loop"]
+        S2_Start(Enter Again) --> H2_0[Second_Hero_0]:::hero
+        H2_0 --> DK2_0[Second_DemonKing_0]:::dk
+        DK2_0 --> Tutorial{Tutorial QTE}
+        
+        Tutorial -- Fail --> W_Fail[White_EarlyDeath]:::white
+        W_Fail --> S2_Start
+        
+        Tutorial -- Success --> DK2_1[Second_DemonKing_1]:::dk
+        DK2_1 --> Fight2(Scripted Loss)
+        Fight2 --> DK2_2[Second_DemonKing_2]:::dk
+        DK2_2 --> SoulRealm2(Soul Realm):::white
+        
+        SoulRealm2 --> W2_0[Second_White_0]:::white
+        W2_0 --> DeathLogic2{Death Analysis}
+        
+        %% Detailed Logic with AND cases
+        DeathLogic2 -- "Attack needs Deflect<br/>AND No Skill" --> WishDeflect2["Wish: Deflect Attacks"]
+        DeathLogic2 -- "Attack needs Dodge<br/>AND No Skill" --> WishDodge2["Wish: Dodge Attacks"]
+        DeathLogic2 -- "Boss Hardened<br/>AND No Break Skill" --> WishHarden2["Wish: Break Harden"]
+        DeathLogic2 -- "Poison Dmg<br/>AND No Resist" --> WishPoison2["Wish: Withstand Poison"]
+        DeathLogic2 -- "Parry Failed<br/>AND No Block Skill" --> WishBlock2["Wish: Be able to Block"]
+        DeathLogic2 -- "Standard Death" --> WishStats2["Common Wishes:<br/>+Dmg / -BossSpd / +HP"]
+    end
+
+    WishDeflect2 & WishDodge2 & WishHarden2 & WishPoison2 & WishBlock2 & WishStats2 --> Scene3
+
+    subgraph Scene3 ["Scene 3: The Descent (Game Loop)"]
+        direction TB
+        
+        S3_Entry(Loop Start) --> CheckCorr{Corruption Level}
+        
+        CheckCorr -- Lvl 1 --> Corr1["Third_Hero_Start_0<br/>Third_DemonKing_Start_0"]
+        CheckCorr -- Lvl 2 --> Corr2["Third_Hero_Start_1<br/>Third_DemonKing_Start_1"]
+        CheckCorr -- Lvl 3 --> Corr3["Third_Hero_Start_2<br/>Third_DemonKing_Start_2"]
+        CheckCorr -- Lvl 4 --> Corr4["Third_Hero_Start_3<br/>Third_DemonKing_Start_3"]
+        CheckCorr -- Lvl 5 --> Corr5["Third_HeroStart_4<br/>Third_DemonKing_Start_4"]
+        
+        Corr1 & Corr2 & Corr3 & Corr4 & Corr5 --> Battle3(Battle)
+        
+        Battle3 -- Player Dies --> DK3_F["Third_DemonKing_Finish_0..4"]:::dk
+        DK3_F --> W3_F["Third_White_Finish_0..4"]:::white
+        W3_F --> DeathLogic3{Death Analysis}
+
+        %% Copied Logic for Scene 3
+        DeathLogic3 -- "Attack needs Deflect<br/>AND No Skill" --> WishDeflect3["Wish: Deflect Attacks"]
+        DeathLogic3 -- "Attack needs Dodge<br/>AND No Skill" --> WishDodge3["Wish: Dodge Attacks"]
+        DeathLogic3 -- "Boss Hardened<br/>AND No Break Skill" --> WishHarden3["Wish: Break Harden"]
+        DeathLogic3 -- "Poison Dmg<br/>AND No Resist" --> WishPoison3["Wish: Withstand Poison"]
+        DeathLogic3 -- "Parry Failed<br/>AND No Block Skill" --> WishBlock3["Wish: Be able to Block"]
+        DeathLogic3 -- "Standard Death" --> WishStats3["Common Wishes:<br/>+Dmg / -BossSpd / +HP"]
+
+        WishDeflect3 & WishDodge3 & WishHarden3 & WishPoison3 & WishBlock3 & WishStats3 --> IncreaseCorr(Corruption++)
+        IncreaseCorr --> S3_Entry
+        
+        Battle3 -- Player Wins --> Scene4
+    end
+
+    subgraph Scene4 ["Scene 4: The Revelation"]
+        S4_Start(Demon King Downed) --> QTE_Finish("Quick Action: Execute")
+        QTE_Finish -- Blocked! --> DK4_0["Fourth_DemonKing_0..1"]:::dk
+        DK4_0 --> DK4_Reveal["Fourth_DemonKing_2..4"]:::dk
+        DK4_Reveal --> S4_Shatter(Hero Head Shattered):::action
+        
+        S4_Shatter --> SoulRealm4("Soul Realm"):::white
+        SoulRealm4 --> H4_Despair["Fourth_Hero_0..5"]:::hero
+        H4_Despair --> DG4_0[Fourth_DemonGod_0]:::red
+        DG4_0 --> H4_Who[Fourth_Hero_6]:::hero
+        H4_Who --> DG4_Offer["Fourth_DemonGod_1..4<br/>The Red Flame Offer"]:::red
+        
+        DG4_Offer -- "Refuse (Impossible)" --> DieFinal(Failure)
+        DG4_Offer -- Accept --> H4_Accept[Fourth_Hero_9]:::hero
+        
+        H4_Accept --> Possession(Possession Sequence):::action
+        Possession --> H4_Pain["Fourth_Hero_10..11"]:::hero
+        H4_Pain --> DG4_Cmd[Fourth_DemonGod_5]:::red
+        
+        DG4_Cmd --> FinalKill(Consume Old King):::action
+        FinalKill --> NewKing["Fourth_NewDemonKing_0..1"]:::dk
+    end
+    
+    NewKing --> TimePass(Time Passes...)
+    
+    subgraph Cycle ["The Cycle Continues"]
+        TimePass --> NewHeroArrives
+        NewHeroArrives --> NH_0[Fourth_NewHero_0]:::hero
+        NH_0 --> NDK_1[Fourth_NewDemonKing_1]:::dk
+        NDK_1 --> TridentKill("Trident Throw / One Shot"):::action
+        TridentKill --> CycleReset(White Flame Consumes New Hero)
+        CycleReset --> NH_1[Fourth_NewHero_1]:::hero
+        NH_1 --> NDK_2[Fourth_NewDemonKing_2]:::dk
+        NDK_2 --> Credits(Credits)
+    end
