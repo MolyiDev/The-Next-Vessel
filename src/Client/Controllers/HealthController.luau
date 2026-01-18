@@ -36,7 +36,7 @@ function HealthController.SetMaxHealth(value: number)
 	MaxHealth = value
 end
 
-function HealthController.Damage(value: number)
+function HealthController.Damage(value: number, cause)
 	local health = Health - value
 	HealthController.SetHealth(health)
 end

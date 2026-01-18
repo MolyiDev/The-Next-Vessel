@@ -1,28 +1,26 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local StarterPlayer = game:GetService("StarterPlayer")
 local Workspace = game:GetService("Workspace")
-local DialogueController = require(StarterPlayer.StarterPlayerScripts.Client.Controllers.DialogueController)
-local DoorsController = require(StarterPlayer.StarterPlayerScripts.Client.Controllers.DoorsController)
-local HealthController = require(StarterPlayer.StarterPlayerScripts.Client.Controllers.HealthController)
-local SceneController = require(script.Parent.Parent.Controllers.SceneController)
-local TorchesController = require(StarterPlayer.StarterPlayerScripts.Client.Controllers.TorchesController)
-local Ignis = require(ReplicatedStorage.Packages.Ignis)
+local FlamesController = require(script.Parent.Parent.Controllers.FlamesController)
+local DialogueController = require(script.Parent.Parent.Controllers.DialogueController)
+local DoorsController = require(script.Parent.Parent.Controllers.DoorsController)
+local HealthController = require(script.Parent.Parent.Controllers.HealthController)
+local TorchesController = require(script.Parent.Parent.Controllers.TorchesController)
 local Promise = require(ReplicatedStorage.Shared.Utils.Promise)
 local ECharacters = require(ReplicatedStorage.Types.Enums.ECharacters)
 local EDialogue = require(ReplicatedStorage.Types.Enums.EDialogue)
+local EFlames = require(ReplicatedStorage.Types.Enums.EFlames)
 local EScenes = require(ReplicatedStorage.Types.Enums.EScenes)
 local TCharacter = require(ReplicatedStorage.Types.TCharacter)
+local TScene = require(ReplicatedStorage.Types.TScene)
 
 local Player = Players.LocalPlayer
 local EnterCollider = CollectionService:GetTagged("EnterCollider")[1] :: BasePart
 local OvParams = OverlapParams.new()
 OvParams.FilterType = Enum.RaycastFilterType.Include
 
-local CurrentPromise: Promise.Promise?
-
-local function CheckCollision()
+local function checkCollision()
 	local parts = Workspace:GetPartsInPart(EnterCollider, OvParams)
 
 	for _, part in parts do
@@ -41,20 +39,11 @@ local function CheckCollision()
 	return false
 end
 
-local Scene_First = {}
-Scene_First.IsActive = false
-
-function Scene_First.OnCharacterAdded(character: TCharacter.TCharacter)
-	-- If there is no promise then there is no while loop, then we don't need the params.
-	if not CurrentPromise then return end
-	OvParams.FilterDescendantsInstances = { character }
-end
-
-local function WaitForPlayerEnter()
+local function waitForPlayerEnter()
 	return Promise.new(function(resolve, _, onCancel)
 		local thread = task.spawn(function()
 			while true do
-				if CheckCollision() then
+				if checkCollision() then
 					resolve()
 					break
 				end
@@ -68,7 +57,7 @@ local function WaitForPlayerEnter()
 	end)
 end
 
-local function LightTorchesSequence()
+local function lightTorchesSequence()
 	return Promise.new(function(resolve, _, onCancel)
 		local thread = task.spawn(function()
 			for i = 1, TorchesController.ROWS do
@@ -84,28 +73,41 @@ local function LightTorchesSequence()
 	end)
 end
 
+local Scene_First = {}
+Scene_First.IsActive = false
+Scene_First.ScriptedDeathActive = false
+Scene_First.CurrentPromise = nil :: Promise.Promise?
+
+function Scene_First.CharacterAdded(character: TCharacter.TCharacter)
+	-- If there is no promise then there is no while loop, then we don't need the params.
+	if not Scene_First.CurrentPromise or not Scene_First.IsActive then return end
+	OvParams.FilterDescendantsInstances = { character }
+end
+
+function Scene_First.CharacterDied()
+	-- Do not reset the scene if the death was scripted
+	return Scene_First.ScriptedDeathActive
+end
+
 function Scene_First.Start()
 	Scene_First.IsActive = true
-	SceneController.CurrentScene = EScenes.First
-	SceneController.ResetFunction = Scene_First.Restart
+	Scene_First.ScriptedDeathActive = false
 
 	Scene_First.CurrentPromise = Promise.new(function(resolve)
 		DoorsController.Open()
-
 		resolve()
 	end)
 		:andThen(function()
 			local character = Player.Character
 			if character then OvParams.FilterDescendantsInstances = { character } end
-
-			return WaitForPlayerEnter()
+			return waitForPlayerEnter()
 		end)
 		:andThen(function()
 			DoorsController.Close()
 			return Promise.delay(1)
 		end)
 		:andThen(function()
-			return LightTorchesSequence()
+			return lightTorchesSequence()
 		end)
 		:andThen(function()
 			return DialogueController.Talk({ Id = ECharacters.Hero, Dialogue = EDialogue.First_Hero_0 })
@@ -115,7 +117,10 @@ function Scene_First.Start()
 		end)
 		:andThen(function()
 			-- Throw trident and kill the player
+			Scene_First.ScriptedDeathActive = true
 			HealthController.SetHealth(0)
+
+			return Promise.delay(2)
 		end)
 		:andThen(function()
 			return DialogueController.Talk({ Id = ECharacters.Hero, Dialogue = EDialogue.First_Hero_1 })
@@ -127,6 +132,7 @@ function Scene_First.Start()
 			return DialogueController.Talk({ Id = ECharacters.Hero, Dialogue = EDialogue.First_Hero_3 })
 		end)
 		:andThen(function()
+			FlamesController.Appear(EFlames.WhiteFlame)
 			return DialogueController.Talk({ Id = ECharacters.God, Dialogue = EDialogue.First_White_0 })
 		end)
 		:andThen(function()
@@ -142,23 +148,31 @@ function Scene_First.Start()
 			-- pick a wish
 		end)
 		:andThen(function()
+			FlamesController.Dissapear()
 			return DialogueController.Talk({ Id = ECharacters.God, Dialogue = EDialogue.First_White_4 })
 		end)
 		:andThen(function()
 			HealthController.Revive()
-			SceneController.OnSceneChanged:Fire(EScenes.First, EScenes.Second)
+			Scene_First.ScriptedDeathActive = false
+			Scene_First.IsActive = false
+
+			-- Go to the next scene
+			return EScenes.Second
 		end)
 		:catch(function(err)
-			warn("Scene First Interrupted or Failed:", err)
+			warn("[Scene_First] Error:", err)
 		end)
+
+	return Scene_First.CurrentPromise
 end
 
 function Scene_First.Stop()
 	Scene_First.IsActive = false
+	Scene_First.ScriptedDeathActive = false
 
-	if CurrentPromise then
-		CurrentPromise:cancel()
-		CurrentPromise = nil
+	if Scene_First.CurrentPromise then
+		Scene_First.CurrentPromise:cancel()
+		Scene_First.CurrentPromise = nil
 	end
 end
 
@@ -173,8 +187,4 @@ function Scene_First.Restart()
 	Scene_First.Start()
 end
 
-SceneController.OnGameStarted:Connect(function()
-	Scene_First.Start()
-end)
-
-return Ignis.Register(Scene_First)
+return Scene_First :: TScene.TScene

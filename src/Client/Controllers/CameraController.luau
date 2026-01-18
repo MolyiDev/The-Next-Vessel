@@ -11,11 +11,12 @@ local TCharacter = require(ReplicatedStorage.Types.TCharacter)
 local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
 local Camera = Workspace.CurrentCamera
+
 Camera.FieldOfView = ECameraFovs.Default
 Camera.CameraType = Enum.CameraType.Scriptable
 
-local xRot = 0
-local yRot = 0
+local CameraYaw = 0
+local CameraPitch = 0
 local RandomPitch = 0
 local RandomRoll = 0
 local MouseDrift = 0
@@ -73,19 +74,23 @@ function CameraController.ToggleCameraLock()
 	end
 end
 
-local connection: RBXScriptConnection
+function CameraController.UpdateRotation()
+	local rx, ry, _ = Camera.CFrame:ToEulerAnglesYXZ()
+	CameraPitch = rx
+	CameraYaw = ry
+end
+
+local Connection: RBXScriptConnection
 
 local function Lerp(a: number, b: number, t: number)
 	return a + (b - a) * t
 end
 
-local function updateCamera(dt: number)
+local function UpdateCamera(dt: number)
 	dt *= 60
-	if CameraController.CameraLocked then
-		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
-	else
-		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-	end
+
+	UserInputService.MouseBehavior = CameraController.CameraLocked and Enum.MouseBehavior.LockCenter
+		or Enum.MouseBehavior.Default
 
 	if Humanoid.AutoRotate then
 		local velocity = HumanoidRootPart.AssemblyAngularVelocity
@@ -115,11 +120,13 @@ local function updateCamera(dt: number)
 			Lerp(RandomRoll, math.cos(tick() * 0.5 * math.random(5, 10)) * ((math.random(2, 10) / 200) * dt), 0.05 * dt)
 
 		local walkSpeed = math.max(Humanoid.WalkSpeed, 0.01)
+
 		VelTilt = math.clamp(
 			Lerp(VelTilt, Camera.CFrame:VectorToObjectSpace(velocity / walkSpeed).x * 0.08, 0.1 * dt),
 			-0.35,
 			0.2
 		)
+
 		MouseDrift = Lerp(MouseDrift, math.clamp(UserInputService:GetMouseDelta().X, -5, 5), 0.25 * dt)
 		OscX = Lerp(OscX, (math.sin(tick() * freq) / 5) * math.min(1, amp / 10), 0.25 * dt)
 
@@ -139,35 +146,37 @@ local function updateCamera(dt: number)
 		local mouseDelta = UserInputService:GetMouseDelta()
 		local mouseSensitivity = UserGameSettings.MouseSensitivity
 
-		xRot = xRot + math.rad(mouseDelta.x * 0.25 * mouseSensitivity * -1)
-		yRot = math.clamp(yRot + math.rad(mouseDelta.y * 0.25 * mouseSensitivity * -1), math.rad(-75), math.rad(75))
+		CameraYaw = CameraYaw + math.rad(mouseDelta.x * 0.25 * mouseSensitivity * -1)
+		CameraPitch =
+			math.clamp(CameraPitch + math.rad(mouseDelta.y * 0.25 * mouseSensitivity * -1), math.rad(-75), math.rad(75))
 
 		Camera.Focus = CFrame.new((Camera.CameraSubject :: BasePart).Position)
-		Camera.CFrame = Camera.Focus * CFrame.fromEulerAnglesYXZ(yRot, xRot, 0) * CFrame.new(0, 0.75, -0.1)
+
+		Camera.CFrame = Camera.Focus * CFrame.fromEulerAnglesYXZ(CameraPitch, CameraYaw, 0) * CFrame.new(0, 0.75, -0.1)
 
 		local _, y, _ = Camera.CFrame:ToOrientation()
 		HumanoidRootPart.CFrame = CFrame.new(HumanoidRootPart.Position) * CFrame.Angles(0, y, 0)
-	else
-		local viewportSize = Camera.ViewportSize
 
-		local OffsetX = ((Mouse.X - viewportSize.X / 2) / (viewportSize.X / 2)) * MaxOffset
-		local OffsetY = ((Mouse.Y - viewportSize.Y / 2) / (viewportSize.Y / 2)) * MaxOffset
-
-		Camera.Focus = Camera.CameraSubject.CFrame
-		Camera.CFrame = Camera.Focus
-			* CFrame.Angles(math.rad(-OffsetY * CameraSensitivity), math.rad(-OffsetX * CameraSensitivity), 0)
-			* CFrame.new(0, 0.75, -0.1)
-
-		local initX, initY, _ = Camera.CFrame:ToEulerAngles(Enum.RotationOrder.XYZ)
-		xRot = initY
-		yRot = -initX
+		return
 	end
+
+	local viewportSize = Camera.ViewportSize
+
+	local OffsetX = ((Mouse.X - viewportSize.X / 2) / (viewportSize.X / 2)) * MaxOffset
+	local OffsetY = ((Mouse.Y - viewportSize.Y / 2) / (viewportSize.Y / 2)) * MaxOffset
+
+	Camera.Focus = Camera.CameraSubject.CFrame
+	Camera.CFrame = Camera.Focus
+		* CFrame.Angles(math.rad(-OffsetY * CameraSensitivity), math.rad(-OffsetX * CameraSensitivity), 0)
+		* CFrame.new(0, 0.75, -0.1)
+
+	CameraController.UpdateRotation()
 
 	Camera.CFrame = Camera.CFrame + Humanoid.CameraOffset
 end
 
 function CameraController.Update()
-	updateCamera(1 / 60)
+	UpdateCamera(1 / 60)
 end
 
 CameraController.OnCharacterAdded = function(character: TCharacter.TCharacter)
@@ -178,11 +187,11 @@ CameraController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 
 	HumanoidRootPart.CFrame = CFrame.new(-5, 3, 0) * CFrame.Angles(0, math.rad(-90), 0)
 
-	connection = RunService.PreRender:Connect(updateCamera)
+	Connection = RunService.PreRender:Connect(UpdateCamera)
 end
 
 CameraController.OnCharacterRemoving = function()
-	connection:Disconnect()
+	if Connection then Connection:Disconnect() end
 end
 
 return Ignis.Register(CameraController)

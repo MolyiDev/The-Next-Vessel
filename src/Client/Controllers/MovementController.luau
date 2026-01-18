@@ -11,7 +11,7 @@ local TCharacter = require(ReplicatedStorage.Types.TCharacter)
 local FADE_OUT = 0.4
 local FADE_IN = 0.4
 local LIMIT = 1.32
-local WALK_ANIM_SPEED = 1.35
+local WALK_ANIM_SPEED = 1.2
 local RUN_ANIM_SPEED = 2
 
 local AnimationsFolder = ReplicatedStorage.Animations
@@ -102,7 +102,7 @@ end
 
 local function MoveDirection()
 	local Direction =
-		WorldMovingDirection(Workspace.CurrentCamera.CFrame:VectorToObjectSpace(Character.Humanoid.MoveDirection))
+		WorldMovingDirection(Character.HumanoidRootPart.CFrame:VectorToObjectSpace(Character.Humanoid.MoveDirection))
 	StopAllAnimations(FADE_OUT)
 	if Direction == Vector3.zero or TweensController.IsImmobile then return end
 

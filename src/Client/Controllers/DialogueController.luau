@@ -235,7 +235,7 @@ function Dialogue.Talk(dialogue: Dialogue): Promise.Promise
 		local dotTask = task.spawn(function()
 			while true do
 				for i = 1, 3 do
-					Refs.NextIndicator.Text = "Next" .. string.rep(".", i)
+					Refs.NextIndicator.Text = "Press F to skip" .. string.rep(".", i)
 					task.wait(0.5)
 				end
 			end

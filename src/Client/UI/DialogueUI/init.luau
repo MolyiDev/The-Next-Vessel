@@ -7,7 +7,7 @@ return function()
 	local transparency = source(0)
 
 	return create("ScreenGui")({
-		Name = "DialogueGui",
+		Name = "DialogueUI",
 		ClipToDeviceSafeArea = false,
 		IgnoreGuiInset = true,
 		ResetOnSpawn = false,
