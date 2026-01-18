@@ -2,17 +2,18 @@ return table.freeze({
 	--==[ First Scene: The Beginning ]==--
 
 	-- The hero opens the door of the demon king throne room
-	-- It's a dark room. But suddenly all the torches light up in sequentially order.
+	-- It's a dark room, the hero enters and the door closes behind him.
+	-- Suddenly all the torches light up in sequentially order.
 	-- The hero sees the demonking.
 
-	First_Hero_0 = [[I have traveled for years for this moment. I will kill you and free the world from your tyranny!]],
-	First_DemonKing_0 = [[So... this is how it is]],
+	First_Hero_0 = [[I have traveled for years for this moment.  I will kill you and free the world from your tyranny!]],
+	First_DemonKing_0 = [[<speed val="0.1">So... this is how it is...</speed>]],
 
 	-- The Demon King grabs his trident and throws it at the hero resulting in the death of the hero.
 
-	First_Hero_1 = [[I... I couldn't even see it...]],
-	First_Hero_2 = [[It cannot end like this...]],
-	First_Hero_3 = [[IT CANNOT END LIKE THIS!]],
+	First_Hero_1 = [[<speed val="0.2">I...</speed> I couldn't even see it...]],
+	First_Hero_2 = [[It <shake val="1">cannot</shake> end like this...]],
+	First_Hero_3 = [[<shake val="3"><speed val="0.02">IT CANNOT END LIKE THIS!</speed></shake>]],
 
 	-- A white flame burns in front of the soul of the hero in the other side.
 
@@ -65,7 +66,7 @@ return table.freeze({
 
 	-- Depending on the attacks that killed the player different wishes will appear on death:
 	-- If the player died because of an attack that is deflectable and doesnt have the deflect then the wish 'Be able to deflect attacks' will appear
-	-- If the player died because of an attack that is dodgeable and doesnt have the dodge then the wish 'Be able to dodge attacks' will appear
+	-- If the player died because of an attack that is not deflectable and doesnt have the dodge then the wish 'Be able to dodge attacks' will appear
 	-- If the player died while the boss was 'hardened' and doesnt have the ability to break the 'hardened skin' then the wish 'Be able to break harden' will appear
 	-- If the player died because of the boss poison and doesnt have the poison resistance  then the wish 'Be able to withstand poison' will appear
 	-- If the player died after failing a parry and doesnt have the ability to block then the wish 'Be able to block' will appear

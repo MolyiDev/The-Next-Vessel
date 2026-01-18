@@ -14,10 +14,8 @@ local Camera = Workspace.CurrentCamera
 Camera.FieldOfView = ECameraFovs.Default
 Camera.CameraType = Enum.CameraType.Scriptable
 
-local initX, initY, _ = Camera.CFrame:ToEulerAngles(Enum.RotationOrder.XYZ)
-
-local xRot = initY
-local yRot = -initX
+local xRot = 0
+local yRot = 0
 local RandomPitch = 0
 local RandomRoll = 0
 local MouseDrift = 0
@@ -58,10 +56,12 @@ function CameraController.ToggleMouse()
 end
 
 function CameraController.LockCamera()
+	CameraController.CameraLocked = true
 	UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
 end
 
 function CameraController.UnlockCamera()
+	CameraController.CameraLocked = false
 	UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 end
 
@@ -82,7 +82,7 @@ end
 local function updateCamera(dt: number)
 	dt *= 60
 	if CameraController.CameraLocked then
-		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
+		UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
 	else
 		UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 	end
@@ -156,9 +156,18 @@ local function updateCamera(dt: number)
 		Camera.Focus = Camera.CameraSubject.CFrame
 		Camera.CFrame = Camera.Focus
 			* CFrame.Angles(math.rad(-OffsetY * CameraSensitivity), math.rad(-OffsetX * CameraSensitivity), 0)
+			* CFrame.new(0, 0.75, -0.1)
+
+		local initX, initY, _ = Camera.CFrame:ToEulerAngles(Enum.RotationOrder.XYZ)
+		xRot = initY
+		yRot = -initX
 	end
 
 	Camera.CFrame = Camera.CFrame + Humanoid.CameraOffset
+end
+
+function CameraController.Update()
+	updateCamera(1 / 60)
 end
 
 CameraController.OnCharacterAdded = function(character: TCharacter.TCharacter)
@@ -166,6 +175,8 @@ CameraController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 
 	Humanoid = character.Humanoid
 	HumanoidRootPart = character.HumanoidRootPart
+
+	HumanoidRootPart.CFrame = CFrame.new(-5, 3, 0) * CFrame.Angles(0, math.rad(-90), 0)
 
 	connection = RunService.PreRender:Connect(updateCamera)
 end

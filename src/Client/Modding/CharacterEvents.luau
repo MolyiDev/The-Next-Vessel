@@ -10,12 +10,16 @@ local CharacterEvents = {}
 local characterAdded = Ignis.RegisterLifecycle("OnCharacterAdded") :: Ignis.Lifecycle<TCharacter.TCharacter>
 local characterRemoving = Ignis.RegisterLifecycle("OnCharacterRemoving") :: Ignis.Lifecycle<TCharacter.TCharacter>
 
-Player.CharacterAdded:Connect(function(character)
-	characterAdded:FireSync(character)
-end)
+function CharacterEvents.OnStart()
+	if Player.Character then characterAdded:FireSync(Player.Character) end
 
-Player.CharacterRemoving:Connect(function(character)
-	characterRemoving:FireSync(character)
-end)
+	Player.CharacterAdded:Connect(function(character)
+		characterAdded:FireSync(character)
+	end)
+
+	Player.CharacterRemoving:Connect(function(character)
+		characterRemoving:FireSync(character)
+	end)
+end
 
 return Ignis.Register(CharacterEvents)
