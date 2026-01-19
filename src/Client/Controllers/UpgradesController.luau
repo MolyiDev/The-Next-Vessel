@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
 local CameraController = require(script.Parent.CameraController)
+local HealthController = require(script.Parent.HealthController)
 local Fluid = require(ReplicatedStorage.Shared.Utils.Fluid)
 local UpgradeUI = require(StarterPlayer.StarterPlayerScripts.Client.UI.UpgradeUI)
 local ERarity = require(ReplicatedStorage.Types.Enums.ERarity)
@@ -41,7 +42,7 @@ local UPGRADES_IMAGES = {
 	[EUpgrades.Parry] = "rbxassetid://71534864279945",
 	[EUpgrades.Block] = "rbxassetid://128112310338378",
 	[EUpgrades.PoisonResistance] = "rbxassetid://125789700898819",
-	[EUpgrades.AbilityBreak] = "",
+	[EUpgrades.AbilityBreak] = "rbxassetid://99321310303969",
 }
 
 local STACKABLE_UPGRADES = {
@@ -80,7 +81,7 @@ local RARITY_COLORS = {
 }
 
 local UpgradesController = {}
-local OwnedUpgrades: { number } = {}
+local OwnedUpgrades: { [number]: true } = {}
 local CurrentPromise: Promise.Promise?
 local UI: UpgradeUI.UpgradeUIReturn
 local OnUpgradeSelected: ((upgradeId: number) -> ())?
@@ -100,18 +101,13 @@ local function fillUpgrades(inputUpgrades: { number }?): { number }
 
 	if #result >= 4 then return result end
 
-	local ownedLookup = {}
-	for _, id in OwnedUpgrades do
-		ownedLookup[id] = true
-	end
-
 	local candidates = {}
 
 	for _, upgradeId in UPGRADES_LIST do
 		if table.find(result, upgradeId) then continue end
 
 		local isStackable = STACKABLE_UPGRADES[upgradeId]
-		local isOwned = ownedLookup[upgradeId]
+		local isOwned = OwnedUpgrades[upgradeId]
 
 		if isStackable or not isOwned then candidates[#candidates + 1] = upgradeId end
 	end
@@ -142,7 +138,15 @@ function UpgradesController.Show(upgrades: { number }?, fill: boolean?): Promise
 
 	CurrentPromise = Promise.new(function(resolve, _, onCancel)
 		OnUpgradeSelected = function(id: number)
-			print(id)
+			OwnedUpgrades[id] = true
+
+			if id == EUpgrades.Health then
+				-- TODO: Increase player health by 20%
+				HealthController.SetMaxHealth(HealthController.GetMaxHealth())
+			elseif id == EUpgrades.Strength then
+				-- TODO: Increase player strength
+			end
+
 			resolve(id)
 		end
 
@@ -163,15 +167,28 @@ function UpgradesController.Show(upgrades: { number }?, fill: boolean?): Promise
 
 		onCancel(function()
 			UI.Disappear()
+			OnUpgradeSelected = nil
+			CurrentPromise = nil
 		end)
 	end):finally(function()
-		print("finally")
 		if UI then UI.Disappear() end
 		OnUpgradeSelected = nil
 		CurrentPromise = nil
 	end)
 
 	return CurrentPromise :: Promise.Promise
+end
+
+function UpgradesController.HasUpgrade(upgrade: number)
+	return OwnedUpgrades[upgrade]
+end
+
+function UpgradesController.RemoveUpgrade(upgrade: number)
+	if not OwnedUpgrades[upgrade] then return end
+
+	OwnedUpgrades[upgrade] = nil
+
+	-- TODO: Remove data, like the 20% of the health added.
 end
 
 return UpgradesController

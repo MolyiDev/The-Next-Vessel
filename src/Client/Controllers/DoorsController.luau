@@ -25,55 +25,63 @@ local function isDoorClosed(door: BasePart)
 	return door:GetAttribute("IsClosed")
 end
 
-local function openDoor(door: BasePart, angle: number)
+local function openDoor(door: BasePart, angle: number, time: number?)
 	local origin = getOriginCFrame(door)
 	local pivot = door.PivotOffset
 
 	local target = origin * pivot * CFrame.Angles(0, math.rad(angle), 0) * pivot:Inverse()
 
-	animateDoor(door, OPEN_TWEEN_INFO, target)
+	local tweenInfo = if time
+		then TweenInfo.new(time, Enum.EasingStyle.Back, Enum.EasingDirection.InOut)
+		else OPEN_TWEEN_INFO
+
+	animateDoor(door, tweenInfo, target)
 	door:SetAttribute("IsClosed", false)
 end
 
-local function closeDoor(door: BasePart)
+local function closeDoor(door: BasePart, time: number?)
 	local origin = getOriginCFrame(door)
 
-	animateDoor(door, CLOSE_TWEEN_INFO, origin)
+	local tweenInfo = if time
+		then TweenInfo.new(time, Enum.EasingStyle.Back, Enum.EasingDirection.InOut)
+		else OPEN_TWEEN_INFO
+
+	animateDoor(door, tweenInfo, origin)
 	door:SetAttribute("IsClosed", true)
 end
 
 local DoorsController = {}
 
-function DoorsController.Open()
+function DoorsController.Open(time: number?)
 	local doors = CollectionService:GetTagged("Door")
 
 	for _, door in doors do
 		if not isDoorClosed(door) then continue end
 
 		local angle = (door.Name == "DoorRight") and -90 or 90
-		openDoor(door, angle)
+		openDoor(door, angle, time)
 	end
 end
 
-function DoorsController.Close()
+function DoorsController.Close(time: number?)
 	local doors = CollectionService:GetTagged("Door")
 
 	for _, door in doors do
 		if isDoorClosed(door) then continue end
 
-		closeDoor(door)
+		closeDoor(door, time)
 	end
 end
 
-function DoorsController.Toggle()
+function DoorsController.Toggle(time: number?)
 	local doors = CollectionService:GetTagged("Door")
 
 	for _, door in doors do
 		if isDoorClosed(door) then
 			local angle = (door.Name == "DoorRight") and -90 or 90
-			openDoor(door, angle)
+			openDoor(door, angle, time)
 		else
-			closeDoor(door)
+			closeDoor(door, time)
 		end
 	end
 end

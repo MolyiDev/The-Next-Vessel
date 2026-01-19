@@ -36,7 +36,7 @@ function HealthController.SetMaxHealth(value: number)
 	MaxHealth = value
 end
 
-function HealthController.Damage(value: number, cause)
+function HealthController.Damage(value: number)
 	local health = Health - value
 	HealthController.SetHealth(health)
 end
@@ -47,7 +47,13 @@ function HealthController.Heal(value: number)
 end
 
 function HealthController.Revive()
+	IsDead = false
+	Health = MaxHealth
 	HealthController.Revived:Fire()
+end
+
+function HealthController.Kill()
+	HealthController.SetHealth(0)
 end
 
 function HealthController.IsDead()

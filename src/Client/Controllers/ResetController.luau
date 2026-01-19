@@ -1,9 +1,14 @@
 local HealthController = require(script.Parent.HealthController)
+local SceneController = require(script.Parent.SceneController)
 
 local resetBindable = Instance.new("BindableEvent")
 
 resetBindable.Event:Connect(function()
-	HealthController.SetHealth(0)
+	if HealthController.IsDead() then
+		SceneController.Restart()
+	else
+		HealthController.Kill()
+	end
 end)
 
 while true do

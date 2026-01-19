@@ -85,7 +85,6 @@ local function ParseRichText(rawText: string)
 		local tagContent = string.sub(rawText, startTag + 1, endTag - 1)
 		local tagName = string.match(tagContent, "^/?(%w+)") :: string
 
-		-- Whitelist standard Roblox RichText tags so we don't treat them as commands
 		local isRichText = table.find({ "b", "i", "u", "s", "font", "stroke", "sc", "br" }, tagName)
 
 		if isRichText then
@@ -128,8 +127,6 @@ local function ApplyFlicker(butler: Butler.Butler, baseText: string, options: st
 	end)
 end
 
---// Public API
-
 function Dialogue.Talk(dialogue: Dialogue): Promise.Promise
 	if CurrentPromise and CurrentPromise:getStatus() == Promise.Status.Started then CurrentPromise:cancel() end
 
@@ -142,34 +139,44 @@ function Dialogue.Talk(dialogue: Dialogue): Promise.Promise
 			if UI then UI.Disappear() end
 		end)
 
-		-- 1. Setup UI
 		local charData = CHARACTERS[dialogue.Id]
 		local refs = UI.Refs
 
-		refs.Name.Text = tostring(dialogue.Name or charData.Name) -- You might want a display name map here
+		refs.Name.Text = tostring(dialogue.Name or charData.Name)
 		refs.Name.TextColor3 = charData.NameColor
-		refs.NextIndicator.Visible = false
 		refs.Text.MaxVisibleGraphemes = 0
 
-		-- 2. Parse & Fade In
+		local indicatorBaseText = "Press F to skip"
+
+		local dotTask = task.spawn(function()
+			while true do
+				for i = 1, 3 do
+					refs.NextIndicator.Text = indicatorBaseText .. string.rep(".", i)
+					task.wait(0.5)
+				end
+			end
+		end)
+		butler:Add(function()
+			task.cancel(dotTask)
+		end)
+
 		local cleanText, commands = ParseRichText(dialogue.Dialogue)
 		refs.Text.Text = cleanText
 
 		UI.Appear()
 		task.wait(FADE_TIME)
 
-		-- 3. Typewriter Loop
 		local totalGraphemes = utf8.len(cleanText) :: number
 		local currentGrapheme = 0
 		local currentSpeed = BASE_SPEED
 		local currentPitch = BASE_PITCH
 		local isSkipped = false
 
-		local inputConn
-		inputConn = butler:Connect(UserInputService.InputBegan, function(input)
+		local skipCn
+		skipCn = butler:Connect(UserInputService.InputBegan, function(input)
 			if input.KeyCode == INPUT_KEY then
 				isSkipped = true
-				butler:Remove(inputConn)
+				butler:Remove(skipCn)
 			end
 		end)
 
@@ -181,7 +188,6 @@ function Dialogue.Talk(dialogue: Dialogue): Promise.Promise
 
 			currentGrapheme += 1
 
-			-- Apply commands (Speed, Pitch, Flicker)
 			if commands[currentGrapheme] then
 				for _, cmd in ipairs(commands[currentGrapheme]) do
 					if cmd.Name == "speed" then
@@ -197,7 +203,6 @@ function Dialogue.Talk(dialogue: Dialogue): Promise.Promise
 			refs.Text.MaxVisibleGraphemes = currentGrapheme
 			local sound = dialogue.Sound or charData.Sound
 
-			-- Play Sound
 			if sound and currentGrapheme % 2 == 0 then
 				local s = sound:Clone()
 				s.Parent = UI.UI
@@ -209,22 +214,10 @@ function Dialogue.Talk(dialogue: Dialogue): Promise.Promise
 			task.wait(currentSpeed)
 		end
 
-		-- 4. Wait for Continuation
-		refs.NextIndicator.Visible = true
+		if skipCn then butler:Remove(skipCn) end
 
-		local dotTask = task.spawn(function()
-			while true do
-				for i = 1, 3 do
-					refs.NextIndicator.Text = "Press F to skip" .. string.rep(".", i)
-					task.wait(0.5)
-				end
-			end
-		end)
-		butler:Add(function()
-			task.cancel(dotTask)
-		end)
+		indicatorBaseText = "Press F to next"
 
-		-- Wait for Input
 		local finished = false
 		butler:Connect(UserInputService.InputBegan, function(input)
 			if input.KeyCode == INPUT_KEY then finished = true end
@@ -234,8 +227,6 @@ function Dialogue.Talk(dialogue: Dialogue): Promise.Promise
 			RunService.Heartbeat:Wait()
 		end
 
-		-- 5. Cleanup
-		refs.NextIndicator.Visible = false
 		UI.Disappear()
 		task.wait(FADE_TIME)
 

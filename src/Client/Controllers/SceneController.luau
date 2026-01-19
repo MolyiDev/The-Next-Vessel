@@ -5,7 +5,6 @@ local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local Signal = require(ReplicatedStorage.Packages.Signal)
-local ELocations = require(ReplicatedStorage.Types.Enums.ELocations)
 local EScenes = require(ReplicatedStorage.Types.Enums.EScenes)
 local CameraController = require(script.Parent.CameraController)
 local HealthController = require(script.Parent.HealthController)
@@ -19,8 +18,6 @@ local SCENE_MODULES: { [number]: TScene.TScene } = table.freeze({
 })
 
 local Player = Players.LocalPlayer
-local Camera = Workspace.CurrentCamera
-local SoulRealmCamera = CollectionService:GetTagged("SoulRealmCamera")[1] :: BasePart
 
 local ActiveSceneModule: TScene.TScene?
 local InputBeganConnection: RBXScriptConnection?
@@ -41,22 +38,6 @@ SceneController.OnGameStarted = Signal.new()
 SceneController.OnSceneChanged = Signal.new() :: Signal.Signal<number, number> -- oldScene, newScene
 SceneController.CurrentScene = EScenes.Starting
 
-function SceneController.Teleport(location: number)
-	local character = Player.Character :: TCharacter.TCharacter
-
-	if location == ELocations.SoulRealm then
-		if character then character.Humanoid.AutoRotate = false end
-		Camera.CameraSubject = SoulRealmCamera
-		CameraController.UnlockCamera()
-		CameraController.Update()
-		TweensController.SetImmobile(false, 0.01)
-	elseif character then
-		Camera.Focus = character.Head
-		startCharacter(character)
-		CameraController.Update()
-	end
-end
-
 function SceneController.LoadScene(sceneId: number)
 	if ActiveSceneModule and ActiveSceneModule.Stop then ActiveSceneModule.Stop() end
 
@@ -69,10 +50,17 @@ function SceneController.LoadScene(sceneId: number)
 	if not ActiveSceneModule or not ActiveSceneModule.Start then return end
 	local scenePromise = ActiveSceneModule.Start()
 	if not scenePromise then return end
+	scenePromise:andThen(function(nextSceneId)
+		if nextSceneId and type(nextSceneId) == "number" then SceneController.LoadScene(nextSceneId) end
+	end)
 end
 
 function SceneController.IsGameStarted(): boolean
 	return SceneController.CurrentScene > 0
+end
+
+function SceneController.Restart()
+	if ActiveSceneModule and ActiveSceneModule.Restart then ActiveSceneModule.Restart() end
 end
 
 SceneController.OnCharacterAdded = function(character: TCharacter.TCharacter)
@@ -110,11 +98,9 @@ end
 HealthController.Died:Connect(function()
 	if SceneController.CurrentScene <= 0 then return end
 
-	SceneController.Teleport(ELocations.SoulRealm)
-
 	if ActiveSceneModule and ActiveSceneModule.CharacterDied then
-		local handled = ActiveSceneModule.CharacterDied()
-		if handled then return end
+		local shouldRestart = ActiveSceneModule.CharacterDied()
+		if not shouldRestart then return end
 	end
 
 	if ActiveSceneModule and ActiveSceneModule.Restart then ActiveSceneModule.Restart() end
@@ -125,7 +111,7 @@ HealthController.Revived:Connect(function()
 	if not character then return end
 	local camera = Workspace.CurrentCamera
 
-	if SceneController.CurrentScene == EScenes.Starting then
+	if SceneController.CurrentScene < EScenes.Third then
 		local firstSpawn = CollectionService:GetTagged("FirstSpawn")[1] :: BasePart
 		if firstSpawn then character.HumanoidRootPart.CFrame = firstSpawn.CFrame end
 	else

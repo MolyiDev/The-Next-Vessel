@@ -1,5 +1,7 @@
 local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local Promise = require(ReplicatedStorage.Shared.Utils.Promise)
 
 export type Torch = {
 	Ignite: Sound,
@@ -37,42 +39,48 @@ local function isTorchLighted(torch: Torch)
 	return torch:GetAttribute("IsLighted")
 end
 
-local function lightTorch(torch: Torch)
+local function lightTorch(torch: Torch, time: number?)
 	for _, particle in torch.Effects:GetChildren() do
 		if not particle:IsA("ParticleEmitter") then continue end
 		particle.Enabled = true
 	end
 
-	TweenService:Create(torch.Lights.NearLight, LIGHT_TWEEN_INFO, {
+	local tweenInfo = if time
+		then TweenInfo.new(time, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
+		else LIGHT_TWEEN_INFO
+
+	TweenService:Create(torch.Lights.NearLight, tweenInfo, {
 		Brightness = NEAR_LIGHT_BRIGTHNESS,
 	}):Play()
 
-	TweenService:Create(torch.Lights.FarLight, LIGHT_TWEEN_INFO, {
+	TweenService:Create(torch.Lights.FarLight, tweenInfo, {
 		Brightness = FAR_LIGHT_BRIGTHNESS,
 	}):Play()
 
 	torch.Ignite:Play()
-	-- torch.Loop:Play()
 
 	torch:SetAttribute("IsLighted", true)
 end
 
-local function unlightTorch(torch: Torch)
+local function unlightTorch(torch: Torch, time: number?)
 	for _, particle in torch.Effects:GetChildren() do
 		if not particle:IsA("ParticleEmitter") then continue end
 		particle.Enabled = false
 	end
 
-	TweenService:Create(torch.Lights.NearLight, UNLIGHT_TWEEN_INFO, {
+	local tweenInfo = if time
+		then TweenInfo.new(time, Enum.EasingStyle.Back, Enum.EasingDirection.In)
+		else UNLIGHT_TWEEN_INFO
+
+	TweenService:Create(torch.Lights.NearLight, tweenInfo, {
 		Brightness = 0,
 	}):Play()
 
-	TweenService:Create(torch.Lights.FarLight, UNLIGHT_TWEEN_INFO, {
+	TweenService:Create(torch.Lights.FarLight, tweenInfo, {
 		Brightness = 0,
 	}):Play()
 
 	torch.Ignite:Stop()
-	torch.Loop:Stop()
 
 	torch:SetAttribute("IsLighted", false)
 end
@@ -80,37 +88,60 @@ end
 local TorchesController = {}
 TorchesController.ROWS = 7
 
-function TorchesController.Light(row: number)
+function TorchesController.Light(row: number, time: number?)
 	local rowTorches = TorchesPerRow[row]
 	if not rowTorches then return end
 
 	for _, torch in rowTorches do
 		if isTorchLighted(torch) then continue end
-		lightTorch(torch)
+		lightTorch(torch, time)
 	end
 end
 
-function TorchesController.Unlight(row: number)
+function TorchesController.Unlight(row: number, time: number?)
 	local rowTorches = TorchesPerRow[row]
 	if not rowTorches then return end
 
 	for _, torch in rowTorches do
 		if not isTorchLighted(torch) then continue end
-		unlightTorch(torch)
+		unlightTorch(torch, time)
 	end
 end
 
-function TorchesController.Toggle(row: number)
+function TorchesController.UnlightAll(time: number?)
+	for i = 1, TorchesController.ROWS do
+		TorchesController.Unlight(i, time)
+	end
+end
+
+function TorchesController.Toggle(row: number, time: number?)
 	local rowTorches = TorchesPerRow[row]
 	if not rowTorches then return end
 
 	for _, torch in rowTorches do
 		if isTorchLighted(torch) then
-			unlightTorch(torch)
+			unlightTorch(torch, time)
 		else
-			lightTorch(torch)
+			lightTorch(torch, time)
 		end
 	end
+end
+
+function TorchesController.LightAllTorchesInSequence(betweenSeconds: number)
+	return Promise.new(function(resolve, _, onCancel)
+		local thread = task.spawn(function()
+			for i = 1, TorchesController.ROWS do
+				TorchesController.Light(i)
+				task.wait(betweenSeconds)
+			end
+
+			resolve()
+		end)
+
+		onCancel(function()
+			task.cancel(thread)
+		end)
+	end)
 end
 
 return TorchesController

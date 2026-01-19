@@ -76,31 +76,37 @@ return table.freeze({
 	-- 'Be faster' makes the boss go 10% slower.
 	-- 'Be more resistant' gives you +20% health.
 
+	Second_White_1 = [[Great choice. I believe in you.]],
+
 	--==[ Third Scene: The Descent ]==--
 	-- In this scene is where the game loop starts.
 	-- The player can die many times he wants and he will be granted a wish to be able to win the battle.
 	-- So everytime you die you become stronger because of the wishes you've made.
 	-- The hero slowly loses his 'hero' persona and becomes obsessed with power/winning.
 
-	-- Level 1: Determination
+	-- Level 0: Determination
 	Third_Hero_Start_0 = [[I will save this world, no matter how many times I die!]],
 	Third_DemonKing_Start_0 = [[Save the world? You barely saved yourself.]],
 
-	-- Level 2: Frustration
+	-- Level 1: Frustration
 	Third_Hero_Start_1 = [[Why won't you just die?!]],
 	Third_DemonKing_Start_1 = [[Persistence is a virtue. Until it becomes a shackle.]],
 
-	-- Level 3: Desperation
+	-- Level 2: Desperation
 	Third_Hero_Start_2 = [[I don't care how much it takes. I will crush you to dust!]],
 	Third_DemonKing_Start_2 = [[Yes... let the anger guide your hand. It's easier that way.]],
 
-	-- Level 4: Obsession
+	-- Level 3: Obsession
 	Third_Hero_Start_3 = [[I'm going to enjoy tearing that armor off your corpse. Piece by Piece.]],
 	Third_DemonKing_Start_3 = [[You have forgotten why you came here, haven't you?]],
 
-	-- Level 5: Complete Corruption
+	-- Level 4: Complete Corruption
 	Third_Hero_Start_4 = [[MORE! I NEED MORE! FIGHT ME! FEED ME!]],
 	Third_DemonKing_Start_4 = [[And there it is. The eyes of a beast.]],
+
+	-- Level 5: Loop Dialogues
+	Third_Hero_Start_5 = [[]],
+	Third_DemonKing_Start_5 = [[]],
 
 	-- Battle
 
@@ -114,12 +120,21 @@ return table.freeze({
 	Third_DemonKing_Finish_2 = [[You are losing yourself.]],
 	Third_DemonKing_Finish_3 = [[Rest now. The cycle... it breaks us all eventually.]],
 	Third_DemonKing_Finish_4 = [[Pitiful. You are not ready.]],
+	Third_DemonKing_Finish_5 = [[What a shame, after all that power you still cannot defeat me.]],
 
-	Third_White_Finish_0 = [[What do you crave?]],
-	Third_White_Finish_1 = [[The enemy is strong. Do not be afraid to ask for help.]],
-	Third_White_Finish_2 = [[Your soul is resilient. It can handle a little more burden.]],
-	Third_White_Finish_3 = [[You are so close. You just need that extra edge. Take it.]],
-	Third_White_Finish_4 = [[Forget the cost. Focus on the power. Wish for it.]],
+	Third_White_Start_0 = [[What do you crave?]],
+	Third_White_Start_1 = [[The enemy is strong. Do not be afraid to ask for help.]],
+	Third_White_Start_2 = [[Your soul is resilient. It can handle a little more burden.]],
+	Third_White_Start_3 = [[You are so close. You just need that extra edge. Take it.]],
+	Third_White_Start_4 = [[Forget the cost. Focus on the power. Wish for it.]],
+	Third_White_Start_5 = [[...]],
+
+	Third_White_Finish_0 = [[]],
+	Third_White_Finish_1 = [[]],
+	Third_White_Finish_2 = [[]],
+	Third_White_Finish_3 = [[You cannot fail anymore.]],
+	Third_White_Finish_4 = [[See you on the other side.]],
+	Third_White_Finish_5 = [[...]],
 
 	-- If the player killed the demon king:
 	--==[ Fourth Scene: The Revelation ]==--
