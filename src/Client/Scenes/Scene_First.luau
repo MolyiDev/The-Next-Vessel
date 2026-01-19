@@ -2,6 +2,7 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local UpgradesController = require(script.Parent.Parent.Controllers.UpgradesController)
 local FlamesController = require(script.Parent.Parent.Controllers.FlamesController)
 local DialogueController = require(script.Parent.Parent.Controllers.DialogueController)
 local DoorsController = require(script.Parent.Parent.Controllers.DoorsController)
@@ -12,6 +13,7 @@ local ECharacters = require(ReplicatedStorage.Types.Enums.ECharacters)
 local EDialogue = require(ReplicatedStorage.Types.Enums.EDialogue)
 local EFlames = require(ReplicatedStorage.Types.Enums.EFlames)
 local EScenes = require(ReplicatedStorage.Types.Enums.EScenes)
+local EUpgrades = require(ReplicatedStorage.Types.Enums.EUpgrades)
 local TCharacter = require(ReplicatedStorage.Types.TCharacter)
 local TScene = require(ReplicatedStorage.Types.TScene)
 
@@ -145,7 +147,10 @@ function Scene_First.Start()
 			return DialogueController.Talk({ Id = ECharacters.God, Dialogue = EDialogue.First_White_3 })
 		end)
 		:andThen(function()
-			-- pick a wish
+			return UpgradesController.Show({
+				EUpgrades.Dodge,
+				EUpgrades.Parry,
+			}, false)
 		end)
 		:andThen(function()
 			FlamesController.Dissapear()

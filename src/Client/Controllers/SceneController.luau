@@ -124,7 +124,14 @@ HealthController.Revived:Connect(function()
 	local character = Player.Character :: TCharacter.TCharacter
 	if not character then return end
 	local camera = Workspace.CurrentCamera
-	character.HumanoidRootPart.CFrame = CFrame.new(-5, 3, 0) * CFrame.Angles(0, math.rad(-90), 0)
+
+	if SceneController.CurrentScene == EScenes.Starting then
+		local firstSpawn = CollectionService:GetTagged("FirstSpawn")[1] :: BasePart
+		if firstSpawn then character.HumanoidRootPart.CFrame = firstSpawn.CFrame end
+	else
+		local secondSpawn = CollectionService:GetTagged("SecondSpawn")[1] :: BasePart
+		if secondSpawn then character.HumanoidRootPart.CFrame = secondSpawn.CFrame end
+	end
 
 	camera.CameraSubject = character.Head
 	camera.CFrame = character.Head.CFrame

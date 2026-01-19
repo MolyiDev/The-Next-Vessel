@@ -1,17 +1,17 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
+local StarterPlayer = game:GetService("StarterPlayer")
 local UserInputService = game:GetService("UserInputService")
+local DialogueUI = require(StarterPlayer.StarterPlayerScripts.Client.UI.DialogueUI)
 local Butler = require(ReplicatedStorage.Packages.Butler)
+local Fluid = require(ReplicatedStorage.Shared.Utils.Fluid)
 local Promise = require(ReplicatedStorage.Shared.Utils.Promise)
 local ECharacters = require(ReplicatedStorage.Types.Enums.ECharacters)
 
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 local TalkSoundsFolder = ReplicatedStorage:WaitForChild("Sounds"):WaitForChild("Talk") :: Folder
-local DialogueUI = PlayerGui:WaitForChild("DialogueUI")
-local DialogueContainer = DialogueUI:WaitForChild("Container") :: Frame
 
 local BASE_SPEED = 0.04
 local BASE_PITCH = 1.0
@@ -27,62 +27,42 @@ export type Dialogue = {
 	Sound: Sound?,
 }
 
-local Refs = {
-	Text = DialogueContainer:WaitForChild("Dialogue") :: TextLabel,
-	Name = DialogueContainer:WaitForChild("Name") :: TextLabel,
-	NextIndicator = DialogueContainer:WaitForChild("Next") :: TextLabel,
-}
-
-local CHARACTERS: { [number]: { Name: string, Image: string, Sound: Sound } } = {
+local CHARACTERS: { [number]: { Name: string, NameColor: Color3, Image: string, Sound: Sound } } = {
 	[ECharacters.Hero] = {
 		Name = "Hero",
+		NameColor = Color3.fromRGB(255, 247, 0),
 		Image = "rbxassetid://72889430595307",
 		Sound = TalkSoundsFolder:WaitForChild("Hero") :: Sound,
 	},
 	[ECharacters.God] = {
 		Name = "God",
+		NameColor = Color3.fromRGB(255, 255, 255),
 		Image = "rbxassetid://93063863161723",
 		Sound = TalkSoundsFolder:WaitForChild("God") :: Sound,
 	},
 	[ECharacters.DemonKing] = {
 		Name = "Demon King",
+		NameColor = Color3.fromRGB(255, 3, 83),
 		Image = "rbxassetid://93063863161723",
 		Sound = TalkSoundsFolder:WaitForChild("DemonKing") :: Sound,
 	},
 	[ECharacters.DemonGod] = {
 		Name = "Demon God",
+		NameColor = Color3.fromRGB(70, 0, 1),
 		Image = "rbxassetid://93063863161723",
 		Sound = TalkSoundsFolder:WaitForChild("DemonGod") :: Sound,
 	},
 }
 
---// State
 local Dialogue = {}
 local CurrentPromise: Promise.Promise?
 local CurrentButler: Butler.Butler?
+local UI: DialogueUI.DialogueUIReturn
 
---// Helper Functions
-
--- Sets transparency for all UI elements and yields until complete if duration > 0
-local function SetTransparency(duration: number, transparency: number, yield: boolean)
-	local twInfo = TweenInfo.new(duration)
-	local tweening = false
-
-	for _, child in DialogueContainer:GetDescendants() do
-		if child:IsA("ImageLabel") then
-			TweenService:Create(child, twInfo, { ImageTransparency = transparency }):Play()
-			tweening = true
-		elseif child:IsA("TextLabel") then
-			TweenService:Create(child, twInfo, { TextTransparency = transparency }):Play()
-			tweening = true
-		elseif child:IsA("UIStroke") then
-			TweenService:Create(child, twInfo, { Transparency = transparency }):Play()
-			tweening = true
-		end
-	end
-
-	if yield and duration > 0 and tweening then task.wait(duration) end
-end
+Fluid.mount(function()
+	UI = DialogueUI()
+	return UI.UI
+end, PlayerGui)
 
 local function ParseRichText(rawText: string)
 	local cleanText = ""
@@ -143,8 +123,7 @@ local function ApplyFlicker(butler: Butler.Butler, baseText: string, options: st
 		if os.clock() - lastUpdate > (speed or 0.1) then
 			lastUpdate = os.clock()
 			idx = (idx % #parts) + 1
-			-- Safely swap text without breaking standard formatting
-			Refs.Text.Text = string.gsub(baseText, parts[idx == 1 and 2 or 1], parts[idx])
+			if UI then UI.Refs.Text.Text = string.gsub(baseText, parts[idx == 1 and 2 or 1], parts[idx]) end
 		end
 	end)
 end
@@ -160,23 +139,24 @@ function Dialogue.Talk(dialogue: Dialogue): Promise.Promise
 
 		onCancel(function()
 			butler:Clean()
-			SetTransparency(0, 1, false)
-			DialogueContainer.Visible = false
+			if UI then UI.Disappear() end
 		end)
 
 		-- 1. Setup UI
 		local charData = CHARACTERS[dialogue.Id]
-		Refs.Name.Text = tostring(dialogue.Name or charData.Name) -- You might want a display name map here
-		Refs.NextIndicator.Visible = false
+		local refs = UI.Refs
 
-		DialogueContainer.Visible = true
-		Refs.Text.MaxVisibleGraphemes = 0
+		refs.Name.Text = tostring(dialogue.Name or charData.Name) -- You might want a display name map here
+		refs.Name.TextColor3 = charData.NameColor
+		refs.NextIndicator.Visible = false
+		refs.Text.MaxVisibleGraphemes = 0
 
 		-- 2. Parse & Fade In
 		local cleanText, commands = ParseRichText(dialogue.Dialogue)
-		Refs.Text.Text = cleanText
+		refs.Text.Text = cleanText
 
-		SetTransparency(FADE_TIME, 0, true)
+		UI.Appear()
+		task.wait(FADE_TIME)
 
 		-- 3. Typewriter Loop
 		local totalGraphemes = utf8.len(cleanText) :: number
@@ -195,7 +175,7 @@ function Dialogue.Talk(dialogue: Dialogue): Promise.Promise
 
 		while currentGrapheme < totalGraphemes do
 			if isSkipped then
-				Refs.Text.MaxVisibleGraphemes = -1
+				refs.Text.MaxVisibleGraphemes = -1
 				break
 			end
 
@@ -214,13 +194,13 @@ function Dialogue.Talk(dialogue: Dialogue): Promise.Promise
 				end
 			end
 
-			Refs.Text.MaxVisibleGraphemes = currentGrapheme
+			refs.Text.MaxVisibleGraphemes = currentGrapheme
 			local sound = dialogue.Sound or charData.Sound
 
 			-- Play Sound
 			if sound and currentGrapheme % 2 == 0 then
 				local s = sound:Clone()
-				s.Parent = DialogueContainer
+				s.Parent = UI.UI
 				s.PlaybackSpeed = currentPitch + ((math.random() - 0.5) * PITCH_VAR)
 				s:Play()
 				game.Debris:AddItem(s, 1)
@@ -230,12 +210,12 @@ function Dialogue.Talk(dialogue: Dialogue): Promise.Promise
 		end
 
 		-- 4. Wait for Continuation
-		Refs.NextIndicator.Visible = true
+		refs.NextIndicator.Visible = true
 
 		local dotTask = task.spawn(function()
 			while true do
 				for i = 1, 3 do
-					Refs.NextIndicator.Text = "Press F to skip" .. string.rep(".", i)
+					refs.NextIndicator.Text = "Press F to skip" .. string.rep(".", i)
 					task.wait(0.5)
 				end
 			end
@@ -255,8 +235,9 @@ function Dialogue.Talk(dialogue: Dialogue): Promise.Promise
 		end
 
 		-- 5. Cleanup
-		Refs.NextIndicator.Visible = false
-		SetTransparency(FADE_TIME, 1, true)
+		refs.NextIndicator.Visible = false
+		UI.Disappear()
+		task.wait(FADE_TIME)
 
 		butler:Clean()
 		resolve()
@@ -276,8 +257,10 @@ function Dialogue.Stop(yield: boolean)
 		CurrentButler = nil
 	end
 
-	SetTransparency(FADE_TIME, 1, yield)
-	DialogueContainer.Visible = false
+	if UI then
+		UI.Disappear()
+		if yield then task.wait(FADE_TIME) end
+	end
 end
 
 return Dialogue

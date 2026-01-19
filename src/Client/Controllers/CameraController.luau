@@ -1,3 +1,4 @@
+local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
@@ -185,7 +186,8 @@ CameraController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 	Humanoid = character.Humanoid
 	HumanoidRootPart = character.HumanoidRootPart
 
-	HumanoidRootPart.CFrame = CFrame.new(-5, 3, 0) * CFrame.Angles(0, math.rad(-90), 0)
+	local firstSpawn = CollectionService:GetTagged("FirstSpawn")[1] :: BasePart
+	if firstSpawn then character.HumanoidRootPart.CFrame = firstSpawn.CFrame end
 
 	Connection = RunService.PreRender:Connect(UpdateCamera)
 end
