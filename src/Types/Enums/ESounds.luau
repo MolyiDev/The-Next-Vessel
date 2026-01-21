@@ -1,3 +1,4 @@
 return table.freeze({
-	Parry = 1,
+	Parry = 0,
+	Dash = 1,
 })

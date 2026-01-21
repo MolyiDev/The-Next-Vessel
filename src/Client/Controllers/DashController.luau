@@ -2,12 +2,16 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local HealthController = require(script.Parent.HealthController)
+local SoundsController = require(script.Parent.SoundsController)
 local TweensController = require(script.Parent.TweensController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local Tools = require(ReplicatedStorage.Shared.Utils.Tools)
 local EDirections = require(ReplicatedStorage.Types.Enums.EDirections)
+local ESounds = require(ReplicatedStorage.Types.Enums.ESounds)
 local UpgradesController = require(script.Parent.UpgradesController)
 local EUpgrades = require(ReplicatedStorage.Types.Enums.EUpgrades)
+local EMovementJumps = require(ReplicatedStorage.Types.Enums.Movement.EMovementJumps)
+local EMovementSpeeds = require(ReplicatedStorage.Types.Enums.Movement.EMovementSpeeds)
 local TCharacter = require(ReplicatedStorage.Types.TCharacter)
 
 local DASH_DURATION = 0.5
@@ -58,7 +62,14 @@ local function stopDash()
 	end
 	table.clear(CurrentAnimations)
 
-	TweensController.SetImmobile(false, 0.01)
+	TweensController.SetImmobile(false)
+
+	local isSprinting = UserInputService:IsKeyDown(Enum.KeyCode.LeftShift)
+	local targetSpeed = if isSprinting then EMovementSpeeds.Running else EMovementSpeeds.Default
+	local targetJump = if isSprinting then EMovementJumps.Running else EMovementJumps.Default
+
+	TweensController.SetSpeed(targetSpeed, 0)
+	TweensController.SetJump(targetJump, 0)
 end
 
 local function getMoveDirection(): Vector3
@@ -146,6 +157,7 @@ function DashController.Dash()
 	if (time() - DashController.LastDashTime) < DASH_COOLDOWN then return end
 	if Connection then return end
 
+	SoundsController.PlayCharacter(ESounds.Dash)
 	DashController.LastDashTime = time()
 
 	BodyVelocity = Instance.new("BodyVelocity")

@@ -34,9 +34,9 @@ type Public = {
 	SetCameraFov: (value: number, tween: TweenInfo) -> (),
 	SetBlur: (value: number, tween: TweenInfo) -> (),
 	SetSaturation: (value: number, tween: TweenInfo) -> (),
-	SetSpeed: (value: number, time: number) -> (),
-	SetJump: (value: number, time: number) -> (),
-	SetImmobile: (value: boolean, time: number) -> (),
+	SetSpeed: (value: number, time: number?) -> (),
+	SetJump: (value: number, time: number?) -> (),
+	SetImmobile: (value: boolean, time: number?) -> (),
 }
 
 local TweensController = {}
@@ -132,27 +132,39 @@ function TweensController.SetSaturation(value: number, tween: TweenInfo)
 	TweensController.Resume()
 end
 
-function TweensController.SetSpeed(value: number, time: number)
+function TweensController.SetSpeed(value: number, time: number?)
 	if Humanoid == nil or TweensController.IsImmobile or SpeedInfo.Target == value then return end
 
 	SpeedInfo.Initial = Humanoid.WalkSpeed
 	SpeedInfo.Target = value
+
+	if not time or time == 0 then
+		Humanoid.WalkSpeed = value
+		return
+	end
+
 	SpeedInfo.Tween = TweenInfo.new(time, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
 	SpeedInfo.TimeElapsed = 0
 	TweensController.Resume()
 end
 
-function TweensController.SetJump(value: number, time: number)
+function TweensController.SetJump(value: number, time: number?)
 	if Humanoid == nil or TweensController.IsImmobile or JumpInfo.Target == value then return end
 
 	JumpInfo.Initial = Humanoid.JumpHeight
 	JumpInfo.Target = value
+
+	if not time or time == 0 then
+		Humanoid.JumpHeight = value
+		return
+	end
+
 	JumpInfo.Tween = TweenInfo.new(time, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut)
 	JumpInfo.TimeElapsed = 0
 	TweensController.Resume()
 end
 
-function TweensController.SetImmobile(value: boolean, time: number)
+function TweensController.SetImmobile(value: boolean, time: number?)
 	if value and not TweensController.IsImmobile then
 		TweensController.SetJump(0, time)
 		TweensController.SetSpeed(0, time)

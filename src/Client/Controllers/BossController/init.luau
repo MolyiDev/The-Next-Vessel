@@ -185,6 +185,8 @@ function BossController.CanParryProjectile(speed: number)
 	return true --canParry
 end
 
+function BossController.SuccessfulParry() end
+
 function BossController.Damage(value: number)
 	print("damageBoss")
 	Health = math.max(Health - value, 0)

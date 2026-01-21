@@ -55,7 +55,7 @@ end
 
 function ParryController.SuccessfulParry()
 	ParryController.LastParryTime = time()
-	SoundsController.Play(ESounds.Parry)
+	SoundsController.PlayCharacter(ESounds.Parry)
 end
 
 UserInputService.InputBegan:Connect(function(input, gp)

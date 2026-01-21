@@ -8,12 +8,14 @@ local BossController = require(script.Parent.BossController)
 local DashController = require(script.Parent.DashController)
 local HealthController = require(script.Parent.HealthController)
 local ParryController = require(script.Parent.ParryController)
+local SoundsController = require(script.Parent.SoundsController)
 local jecs = require(ReplicatedStorage.Packages.jecs)
 local Components = require(ReplicatedStorage.Shared.ECS.Components)
 local WorldRef = require(ReplicatedStorage.Shared.ECS.References.WorldRef)
 local Tags = require(ReplicatedStorage.Shared.ECS.Tags)
 local World = require(ReplicatedStorage.Shared.ECS.Worlds.World)
 local ObjectPooler = require(ReplicatedStorage.Shared.Utils.ObjectPooler)
+local ESounds = require(ReplicatedStorage.Types.Enums.ESounds)
 local TCharacter = require(ReplicatedStorage.Types.TCharacter)
 
 type Projectile = {
@@ -135,6 +137,8 @@ RunService.Heartbeat:Connect(function(dt: number)
 					-- Increase Speed & Push forward slightly
 					World:set(entity, Components.Speed, speed * 1.1)
 					World:set(entity, Components.CFrame, CFrame.new(newPos + (direction * 2)))
+
+					SoundsController.PlayBoss(ESounds.Parry)
 				else
 					-- :: BOSS HIT ::
 					BossController.Damage(1)
