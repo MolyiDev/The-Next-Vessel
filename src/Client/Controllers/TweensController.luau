@@ -17,6 +17,15 @@ type TInfo = {
 	TimeElapsed: number,
 }
 
+type DashInfo = {
+	Direction: number,
+	Time: number,
+	InitialSpeed: number,
+	FinalSpeed: number,
+	Stun: boolean,
+	TimeElapsed: number,
+}
+
 type Public = {
 	ZeroTween: TweenInfo,
 	IsImmobile: boolean,
@@ -73,6 +82,15 @@ local JumpInfo: TInfo = {
 	Initial = EMovementJumps.Default,
 	Target = EMovementJumps.Default,
 	Tween = TweenInfo.new(0),
+	TimeElapsed = 0,
+}
+
+local DashInfo: DashInfo = {
+	Direction = 0,
+	Time = 0,
+	InitialSpeed = 0,
+	FinalSpeed = 0,
+	Stun = false,
 	TimeElapsed = 0,
 }
 
@@ -146,7 +164,7 @@ function TweensController.SetImmobile(value: boolean, time: number)
 	end
 end
 
-local function Update(dt: number)
+local function update(dt: number)
 	CameraInfo.TimeElapsed = math.min(CameraInfo.TimeElapsed + dt, CameraInfo.Tween.Time)
 	BlurInfo.TimeElapsed = math.min(BlurInfo.TimeElapsed + dt, BlurInfo.Tween.Time)
 	SaturationInfo.TimeElapsed = math.min(SaturationInfo.TimeElapsed + dt, SaturationInfo.Tween.Time)
@@ -210,7 +228,7 @@ end
 
 function TweensController.Resume()
 	if UpdateConnection then return end
-	UpdateConnection = RunService.Heartbeat:Connect(Update)
+	UpdateConnection = RunService.Heartbeat:Connect(update)
 end
 
 return Ignis.Register(TweensController) :: Public

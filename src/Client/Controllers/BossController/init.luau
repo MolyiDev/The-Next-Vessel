@@ -1,11 +1,13 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TCharacter = require(ReplicatedStorage.Types.TCharacter)
 local HealthController = require(script.Parent.HealthController)
 
-local BossR6 = CollectionService:GetTagged("Boss")[1]
+local BossR6 = CollectionService:GetTagged("Boss")[1] :: TCharacter.TCharacter
 local Humanoid = BossR6 and BossR6:WaitForChild("Humanoid") :: Humanoid
 local HumanoidRootPart = BossR6 and BossR6:WaitForChild("HumanoidRootPart") :: BasePart
-local Animator = BossR6 and BossR6:WaitForChild("Animator") :: Animator
+local Animator = Humanoid and Humanoid:WaitForChild("Animator") :: Animator
 
 local ATTACK_RANGE = 12
 local ACTION_COOLDOWN = 1.5
@@ -43,7 +45,10 @@ end
 
 local BossController = {}
 BossController.IsActive = false
-BossController.Health = 100
+BossController.Difficulty = 20
+
+local Health = 100
+local MaxHealth = 100
 
 function BossController.Harden()
 	if IsActing then return end
@@ -150,6 +155,39 @@ end
 
 function BossController.IsImmobilized()
 	return BossR6.Humanoid.WalkSpeed == 0
+end
+
+function BossController.GetCurrentPosition(): Vector3
+	return BossR6.HumanoidRootPart.Position
+end
+
+function BossController.GetRig()
+	return BossR6
+end
+
+function BossController.CanParryProjectile(speed: number)
+	-- Base logic:
+	-- 1. High difficulty = Higher base chance.
+	-- 2. High speed = Divides the chance (making it harder).
+
+	-- Example Formula: (Difficulty * 15) / Speed
+	-- If Diff 5, Speed 50  -> (75/50)  = 1.5 (150% chance - Guaranteed)
+	-- If Diff 5, Speed 100 -> (75/100) = 0.75 (75% chance)
+	-- If Diff 1, Speed 100 -> (15/100) = 0.15 (15% chance)
+
+	local parryChance = (BossController.Difficulty * 15) / math.max(speed, 1)
+
+	-- Clamp chance to ensure it's never impossible or fully guaranteed if you want randomness
+	parryChance = math.clamp(parryChance, 0.1, 0.95)
+	local canParry = math.random() < parryChance
+	-- print("CanParry:", canParry)
+
+	return true --canParry
+end
+
+function BossController.Damage(value: number)
+	print("damageBoss")
+	Health = math.max(Health - value, 0)
 end
 
 return BossController

@@ -6,15 +6,8 @@ local AnimatorConnection: RBXScriptConnection?
 local EffectsGroup = SoundService:WaitForChild("Effects") :: SoundGroup
 local FootstepsSounds = ReplicatedStorage:WaitForChild("Sounds"):WaitForChild("Footsteps") :: { [string]: Sound }
 local AnimationNames = {
-	RunFront = true,
-	WalkFront = true,
-	WalkFrontLeft = true,
-	WalkFrontRight = true,
-	WalkBack = true,
-	WalkBackLeft = true,
-	WalkBackRight = true,
-	WalkLeft = true,
-	WalkRight = true,
+	Run = true,
+	Walk = true,
 }
 
 local MIN_TREMOLO = 0.65

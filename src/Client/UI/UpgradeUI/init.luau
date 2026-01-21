@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
 local scaleNumber = require(StarterPlayer.StarterPlayerScripts.Client.UI.Components.scaleNumber)
 local Fluid = require(ReplicatedStorage.Shared.Utils.Fluid)
+local Tools = require(ReplicatedStorage.Shared.Utils.Tools)
 
 export type UpgradeUIParams = {
 	SelectedCard: (upgrade: number) -> (),
@@ -27,10 +28,6 @@ local source = Fluid.source
 local derive = Fluid.derive
 local spring = Fluid.spring
 
-local function lerpColor(c1: Color3, c2: Color3, alpha: number): Color3
-	return Color3.new(c1.R + (c2.R - c1.R) * alpha, c1.G + (c2.G - c1.G) * alpha, c1.B + (c2.B - c1.B) * alpha)
-end
-
 return function(params: UpgradeUIParams): UpgradeUIReturn
 	local transparencyTarget = source(1)
 	local transparency = spring(transparencyTarget, 20, 0.8)
@@ -45,8 +42,8 @@ return function(params: UpgradeUIParams): UpgradeUIReturn
 	local function upgradeButton(data: SpawnCardParams)
 		local defaultGradient = data.GradientColor
 		local darkGradient = ColorSequence.new(
-			lerpColor(data.GradientColor.Keypoints[1].Value, Color3.new(), 0.2),
-			lerpColor(data.GradientColor.Keypoints[2].Value, Color3.new(), 0.2)
+			Tools.DarkenColor(data.GradientColor.Keypoints[1].Value, 0.2),
+			Tools.DarkenColor(data.GradientColor.Keypoints[2].Value, 0.2)
 		)
 
 		local gradient = source(defaultGradient)

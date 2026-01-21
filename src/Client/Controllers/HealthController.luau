@@ -1,8 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Signal = require(ReplicatedStorage.Packages.Signal)
 
-local Health = 0
-local MaxHealth = 0
+local Health = 100
+local MaxHealth = 100
 local IsDead = false
 
 local HealthController = {}
@@ -37,6 +37,7 @@ function HealthController.SetMaxHealth(value: number)
 end
 
 function HealthController.Damage(value: number)
+	print("damagePlayer")
 	local health = Health - value
 	HealthController.SetHealth(health)
 end

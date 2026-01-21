@@ -62,7 +62,7 @@ function Scene_Second.Start()
 			-- Slow down time and wait for the player to react
 
 			-- Wait for the player to parry/dodge while showing the key to parry/dodge
-			if UpgradesController.HasUpgrade(EUpgrades.Dodge) then
+			if UpgradesController.HasUpgrade(EUpgrades.Dash) then
 				--
 			elseif UpgradesController.HasUpgrade(EUpgrades.Parry) then
 				--

@@ -24,3 +24,4 @@ lune = "^0.10.2"
 Signal = { name = "molyidev/signal", version = "^1.0.2" }
 Ignis = { name = "molyidev/ignis", version = "^0.1.1" }
 Butler = { name = "molyidev/butler", version = "^1.2.2" }
+jecs = { name = "marked/jecs", version = "^0.9.0" }

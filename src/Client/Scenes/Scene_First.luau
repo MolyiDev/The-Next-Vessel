@@ -1,4 +1,6 @@
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ProjectileController = require(script.Parent.Parent.Controllers.ProjectileController)
 local ColliderControler = require(script.Parent.Parent.Controllers.ColliderControler)
 local UpgradesController = require(script.Parent.Parent.Controllers.UpgradesController)
 local FlamesController = require(script.Parent.Parent.Controllers.FlamesController)
@@ -52,7 +54,14 @@ function Scene_First.Start()
 			return Promise.delay(1)
 		end)
 		:andThen(function()
-			BossController.Start()
+			local character = Players.LocalPlayer.Character
+			if not character then return end
+			ProjectileController.AddProjectile(
+				BossController.GetCurrentPosition(),
+				character.PrimaryPart.Position,
+				60,
+				2.5
+			)
 			return Promise.delay(99999)
 			-- return TorchesController.LightAllTorchesInSequence(0.5)
 		end)
@@ -95,7 +104,7 @@ function Scene_First.Start()
 		end)
 		:andThen(function()
 			return UpgradesController.Show({
-				EUpgrades.Dodge,
+				EUpgrades.Dash,
 				EUpgrades.Parry,
 			}, false)
 		end)

@@ -112,11 +112,11 @@ HealthController.Revived:Connect(function()
 	local camera = Workspace.CurrentCamera
 
 	if SceneController.CurrentScene < EScenes.Third then
-		local firstSpawn = CollectionService:GetTagged("FirstSpawn")[1] :: BasePart
-		if firstSpawn then character.HumanoidRootPart.CFrame = firstSpawn.CFrame end
+		local firstSpawn = CollectionService:GetTagged("FirstSpawn")[1] :: Attachment
+		if firstSpawn then character.HumanoidRootPart.CFrame = firstSpawn.WorldCFrame end
 	else
-		local secondSpawn = CollectionService:GetTagged("SecondSpawn")[1] :: BasePart
-		if secondSpawn then character.HumanoidRootPart.CFrame = secondSpawn.CFrame end
+		local secondSpawn = CollectionService:GetTagged("SecondSpawn")[1] :: Attachment
+		if secondSpawn then character.HumanoidRootPart.CFrame = secondSpawn.WorldCFrame end
 	end
 
 	camera.CameraSubject = character.Head

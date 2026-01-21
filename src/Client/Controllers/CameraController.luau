@@ -181,13 +181,14 @@ function CameraController.Update()
 end
 
 CameraController.OnCharacterAdded = function(character: TCharacter.TCharacter)
-	Camera.CameraSubject = character.Head
-
 	Humanoid = character.Humanoid
 	HumanoidRootPart = character.HumanoidRootPart
 
-	local firstSpawn = CollectionService:GetTagged("FirstSpawn")[1] :: BasePart
-	if firstSpawn then character.HumanoidRootPart.CFrame = firstSpawn.CFrame end
+	local firstSpawn = CollectionService:GetTagged("FirstSpawn")[1] :: Attachment
+	if firstSpawn then character.HumanoidRootPart.CFrame = firstSpawn.WorldCFrame end
+
+	Camera.CameraSubject = character.Head
+	Camera.CFrame = character.Head.CFrame
 
 	Connection = RunService.PreRender:Connect(UpdateCamera)
 end

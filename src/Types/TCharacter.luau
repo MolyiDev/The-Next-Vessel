@@ -7,7 +7,6 @@ export type TCharacter = {
 	["Right Leg"]: BasePart,
 	Torso: BasePart,
 	Humanoid: THumanoid,
-	Weapons: Folder,
 } & Model
 
 export type THumanoid = {
