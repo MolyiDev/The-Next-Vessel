@@ -1,4 +1,7 @@
 return table.freeze({
-	Parry = 0,
-	Dash = 1,
+	OpenDoor = 0,
+	CloseDoor = 1,
+	IgniteFlame = 2,
+	Parry = 3,
+	Dash = 4,
 })

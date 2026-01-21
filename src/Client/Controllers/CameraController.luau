@@ -81,6 +81,80 @@ function CameraController.UpdateRotation()
 	CameraYaw = ry
 end
 
+local function randomizeOffset(magnitude: number, positionInfluence: Vector3, rotationInfluence: Vector3)
+	-- Random position
+	local positionOffset: Vector3 =
+		Vector3.new(math.random(-1, 1) * magnitude, math.random(-1, 1) * magnitude, math.random(-1, 1) * magnitude)
+	positionOffset *= positionInfluence
+
+	-- Random rotation
+	local rotationOffset: Vector3 =
+		Vector3.new(math.random(-1, 1) * magnitude, math.random(-1, 1) * magnitude, math.random(-1, 1) * magnitude)
+	rotationOffset *= rotationInfluence
+
+	-- Combine into CFrame
+	local offsetCF: CFrame = CFrame.new(positionOffset)
+		* CFrame.Angles(math.rad(rotationOffset.X), math.rad(rotationOffset.Y), math.rad(rotationOffset.Z))
+	return offsetCF
+end
+
+-- Should take the next values:
+--
+-- Magnitude
+-- How vigorous the shake will be; how far in each direaction the camera can shake
+-- Higher number, more strength
+--
+-- Roughness
+-- Determines how 'rough' the shaking will be
+-- Higher number = smoother, lower number = sharper
+-- The time, in secods, each jut in a direction will take
+--
+-- Duration
+-- How long the shake will last, in secods
+--
+-- PositionInfluence
+-- How much the shake will affect each positional axis
+-- Relative to world
+--
+-- RotationInfluence
+-- How much the shake will affect each positional axis
+-- Relative to world
+--
+-- FadeOut
+-- The amount the Magnitude will fade out by along the duration of the shake (substracted each frame)
+-- Higher number = faster fade out
+function CameraController.Shake(
+	magnitude: number,
+	roughness: number,
+	duration: number,
+	positionInfluence: Vector3,
+	rotationInfluence: Vector3,
+	fadeOut: number
+)
+	local magnitudeCopy: number = magnitude
+	local startTime = os.clock()
+
+	repeat
+		-- Get a random offsetted CFrame based on CameraShake.new values
+		local offsetCF: CFrame = randomizeOffset(magnitude, positionInfluence, rotationInfluence)
+
+		RunService.RenderStepped:Wait()
+		local beforeCF = Camera.CFrame
+		local goalCF = beforeCF * offsetCF
+
+		local lerpStart = os.clock()
+
+		repeat
+			goalCF = beforeCF * offsetCF
+			Camera.CFrame = Camera.CFrame:Lerp(goalCF, 0.5)
+			RunService.RenderStepped:Wait()
+		until os.clock() - lerpStart >= roughness / 100
+
+		magnitude = math.clamp(magnitude - fadeOut, 0, magnitudeCopy)
+
+	until os.clock() - startTime >= duration
+end
+
 local Connection: RBXScriptConnection
 
 local function Lerp(a: number, b: number, t: number)

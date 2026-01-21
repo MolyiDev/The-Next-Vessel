@@ -1,5 +1,6 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TimeController = require(script.Parent.Parent.Controllers.TimeController)
 local ProjectileController = require(script.Parent.Parent.Controllers.ProjectileController)
 local ColliderControler = require(script.Parent.Parent.Controllers.ColliderControler)
 local UpgradesController = require(script.Parent.Parent.Controllers.UpgradesController)
@@ -59,7 +60,7 @@ function Scene_First.Start()
 			ProjectileController.AddProjectile(
 				BossController.GetCurrentPosition(),
 				character.PrimaryPart.Position,
-				60,
+				80,
 				2.5
 			)
 			return Promise.delay(99999)

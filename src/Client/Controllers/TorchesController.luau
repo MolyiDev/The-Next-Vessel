@@ -1,11 +1,11 @@
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
+local SoundsController = require(script.Parent.SoundsController)
 local Promise = require(ReplicatedStorage.Shared.Utils.Promise)
+local ESounds = require(ReplicatedStorage.Types.Enums.ESounds)
 
 export type Torch = {
-	Ignite: Sound,
-	Loop: Sound,
 	Effects: Attachment,
 	Lights: {
 		FarLight: PointLight,
@@ -57,8 +57,7 @@ local function lightTorch(torch: Torch, time: number?)
 		Brightness = FAR_LIGHT_BRIGTHNESS,
 	}):Play()
 
-	torch.Ignite:Play()
-
+	SoundsController.Play(ESounds.IgniteFlame, torch)
 	torch:SetAttribute("IsLighted", true)
 end
 
@@ -79,8 +78,6 @@ local function unlightTorch(torch: Torch, time: number?)
 	TweenService:Create(torch.Lights.FarLight, tweenInfo, {
 		Brightness = 0,
 	}):Play()
-
-	torch.Ignite:Stop()
 
 	torch:SetAttribute("IsLighted", false)
 end

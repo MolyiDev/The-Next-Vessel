@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
+local SoundsController = require(script.Parent.SoundsController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 
 local AnimatorConnection: RBXScriptConnection?
@@ -45,15 +46,18 @@ function FootstepsController.OnCharacterAdded(character: Model)
 			local randomSpeed = math.random() * (MAX_SPEED - MIN_SPEED) + MIN_SPEED
 			SelectedSound.PlaybackSpeed = math.round(randomSpeed * 1000) / 1000
 
-			local tremoloSound = Instance.new("TremoloSoundEffect", SelectedSound)
+			local tremoloSound = Instance.new("TremoloSoundEffect")
 			local randomTremolo = math.random() * (MAX_TREMOLO - MIN_TREMOLO) + MIN_TREMOLO
 			tremoloSound.Depth = math.round(randomTremolo * 1000) / 1000
+			tremoloSound.Parent = SelectedSound
+			local id = SoundsController.AddSound(SelectedSound)
 
-			SelectedSound:Play()
-
-			SelectedSound.Stopped:Once(function()
+			SelectedSound.Ended:Once(function()
+				SoundsController.RemoveSound(id)
 				SelectedSound:Destroy()
 			end)
+
+			SelectedSound:Play()
 		end)
 
 		animationTrack.Stopped:Once(function()

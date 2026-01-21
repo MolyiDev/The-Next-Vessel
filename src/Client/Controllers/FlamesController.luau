@@ -1,10 +1,12 @@
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundsController = require(script.Parent.SoundsController)
 local EFlames = require(ReplicatedStorage.Types.Enums.EFlames)
+local ESounds = require(ReplicatedStorage.Types.Enums.ESounds)
 
 local FLAME_ATTACHMENTS = {
-	[EFlames.WhiteFlame] = ReplicatedStorage:WaitForChild("Effects"):WaitForChild("WhiteFlame") :: { Ignite: Sound } & Attachment,
-	[EFlames.RedFlame] = ReplicatedStorage:WaitForChild("Effects"):WaitForChild("RedFlame") :: { Ignite: Sound } & Attachment,
+	[EFlames.WhiteFlame] = ReplicatedStorage:WaitForChild("Effects"):WaitForChild("WhiteFlame") :: Attachment,
+	[EFlames.RedFlame] = ReplicatedStorage:WaitForChild("Effects"):WaitForChild("RedFlame") :: Attachment,
 }
 
 local SoulRealmFlame = CollectionService:GetTagged("SoulRealmFlame")[1] :: Attachment
@@ -22,7 +24,7 @@ function FlamesController.Appear(flameId: number)
 
 	local clone = flame:Clone()
 	clone.Parent = SoulRealmFlame
-	clone.Ignite:Play()
+	SoundsController.Play(ESounds.IgniteFlame, clone)
 	currentFlame = clone
 end
 

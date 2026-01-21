@@ -1,6 +1,9 @@
 local CollectionService = game:GetService("CollectionService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local TweenService = game:GetService("TweenService")
+local ESounds = require(ReplicatedStorage.Types.Enums.ESounds)
+local SoundsController = require(script.Parent.SoundsController)
 
 local OPEN_TIME = 0.9
 local CLOSE_TIME = 0.7
@@ -9,8 +12,6 @@ local OPEN_EASING_DIRECTION = Enum.EasingDirection.Out
 local CLOSE_EASING_DIRECTION = Enum.EasingDirection.In
 
 local ActiveAnimations: { [Model]: RBXScriptConnection } = {}
-local OpenSound = CollectionService:GetTagged("OpenDoor")[1] :: Sound
-local CloseSound = CollectionService:GetTagged("CloseDoor")[1] :: Sound
 
 local function getOriginPivot(door: Model): CFrame
 	local origin = door:GetAttribute("OriginalPivot") :: CFrame
@@ -80,31 +81,31 @@ local DoorsController = {}
 
 function DoorsController.Open(time: number?)
 	local doors = CollectionService:GetTagged("Door")
-	local opened = false
+	local parent: Instance
 
 	for _, door in doors do
 		if not isDoorClosed(door) then continue end
 
-		opened = true
+		parent = door.Parent
 		local angle = (door.Name == "DoorRight") and -80 or 80
 		openDoor(door, angle, time)
 	end
 
-	if opened then OpenSound:Play() end
+	if parent then SoundsController.Play(ESounds.OpenDoor, parent) end
 end
 
 function DoorsController.Close(time: number?)
 	local doors = CollectionService:GetTagged("Door")
-	local closed = false
+	local parent: Instance
 
 	for _, door in doors do
 		if isDoorClosed(door) then continue end
-		closed = true
 
+		parent = door.Parent
 		closeDoor(door, time)
 	end
 
-	if closed then CloseSound:Play() end
+	if parent then SoundsController.Play(ESounds.CloseDoor, parent) end
 end
 
 function DoorsController.Toggle(time: number?)

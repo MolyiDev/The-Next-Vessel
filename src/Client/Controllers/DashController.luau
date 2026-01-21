@@ -3,6 +3,7 @@ local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local HealthController = require(script.Parent.HealthController)
 local SoundsController = require(script.Parent.SoundsController)
+local TimeController = require(script.Parent.TimeController)
 local TweensController = require(script.Parent.TweensController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local Tools = require(ReplicatedStorage.Shared.Utils.Tools)
@@ -72,6 +73,12 @@ local function stopDash()
 	TweensController.SetJump(targetJump, 0)
 end
 
+local function updateDashAnimSpeed()
+	for _, track in CurrentAnimations do
+		track:AdjustSpeed(TimeController.TimeScale)
+	end
+end
+
 local function getMoveDirection(): Vector3
 	if not Character then return Vector3.zero end
 
@@ -100,12 +107,13 @@ local function getMoveDirection(): Vector3
 	return -look
 end
 
-local function update(dt: number)
+local function update(rawDt: number)
 	if not Character then
 		stopDash()
 		return
 	end
 
+	local dt = TimeController.GetDeltaTime(rawDt)
 	TimeElapsed += dt
 
 	if TimeElapsed >= DASH_DURATION then
@@ -117,7 +125,7 @@ local function update(dt: number)
 	local speed = Tools.Lerp(DASH_INITIAL_SPEED, DASH_FINAL_SPEED, progress)
 	local moveDirection = getMoveDirection().Unit
 
-	if BodyVelocity then BodyVelocity.Velocity = moveDirection * speed end
+	if BodyVelocity then BodyVelocity.Velocity = moveDirection * speed * TimeController.TimeScale end
 end
 
 function DashController.IsDashing()
@@ -176,12 +184,17 @@ function DashController.Dash()
 
 	for _, anim in animations do
 		anim:Play(0.2)
+		anim:AdjustSpeed(TimeController.TimeScale)
 		CurrentAnimations[#CurrentAnimations + 1] = anim
 	end
 
 	TweensController.SetImmobile(true, 0.01)
 	Connection = RunService.Heartbeat:Connect(update)
 end
+
+TimeController.TimeScaleChanged:Connect(function()
+	if Connection then updateDashAnimSpeed() end
+end)
 
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp or input.KeyCode ~= Enum.KeyCode.Q then return end

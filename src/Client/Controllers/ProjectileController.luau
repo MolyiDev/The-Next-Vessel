@@ -9,6 +9,7 @@ local DashController = require(script.Parent.DashController)
 local HealthController = require(script.Parent.HealthController)
 local ParryController = require(script.Parent.ParryController)
 local SoundsController = require(script.Parent.SoundsController)
+local TimeController = require(script.Parent.TimeController)
 local jecs = require(ReplicatedStorage.Packages.jecs)
 local Components = require(ReplicatedStorage.Shared.ECS.Components)
 local WorldRef = require(ReplicatedStorage.Shared.ECS.References.WorldRef)
@@ -77,7 +78,10 @@ function ProjectileController.RemoveProjectile(projectileEntity: jecs.Entity)
 	ProjectilePool:Return(model)
 end
 
-RunService.Heartbeat:Connect(function(dt: number)
+RunService.Heartbeat:Connect(function(rawDt: number)
+	local dt = TimeController.GetDeltaTime(rawDt)
+	if dt <= 0.001 then return end
+
 	local character = Player.Character
 	local characterPos = if character then character.PrimaryPart.Position else nil
 	local bossRig = BossController.GetRig()
@@ -112,32 +116,36 @@ RunService.Heartbeat:Connect(function(dt: number)
 		-- Calculate Displacement
 		local displacement = direction * speed * dt
 		local newPos = currentPos + displacement
+		local segLenSq = displacement.Magnitude * displacement.Magnitude
 
 		-- ================================================================================
 		-- 2. BOSS INTERACTION (If Player Parried)
 		-- ================================================================================
 		if World:has(entity, Tags.Parried) and bossRoot then
-			-- Check distance to Boss
-			if (newPos - bossRoot.Position).Magnitude < 6 then
+			local toBoss = bossRoot.Position - currentPos
+
+			-- Project boss position onto the movement path
+			local t = if segLenSq > 0 then toBoss:Dot(displacement) / segLenSq else 0
+			local clampedT = math.clamp(t, 0, 1)
+			local closestPoint = currentPos + (displacement * clampedT)
+
+			-- Check distance to the path, not just the endpoint
+			if (closestPoint - bossRoot.Position).Magnitude < 6 then
 				if BossController.CanParryProjectile(speed) then
 					-- :: BOSS PARRIES ::
-					World:remove(entity, Tags.Parried) -- Reset tag
+					World:remove(entity, Tags.Parried)
 
 					if character then
-						-- Target Player
 						World:set(entity, Components.Target, character.PrimaryPart)
-
-						-- Initial reflect direction towards player
 						local dirToPlayer = (characterPos - newPos).Unit
 						World:set(entity, Components.Direction, dirToPlayer)
 					else
 						World:set(entity, Components.Direction, -direction)
 					end
 
-					-- Increase Speed & Push forward slightly
 					World:set(entity, Components.Speed, speed * 1.1)
-					World:set(entity, Components.CFrame, CFrame.new(newPos + (direction * 2)))
-
+					-- Reset position to impact point to prevent visual clipping
+					World:set(entity, Components.CFrame, CFrame.new(closestPoint + (direction * 2)))
 					SoundsController.PlayBoss(ESounds.Parry)
 				else
 					-- :: BOSS HIT ::
@@ -154,7 +162,6 @@ RunService.Heartbeat:Connect(function(dt: number)
 		if characterPos and not World:has(entity, Tags.Parried) then
 			-- Math: Find the closest point on the line segment (current -> new) to the player
 			local toPlayer = characterPos - currentPos
-			local segLenSq = displacement.Magnitude * displacement.Magnitude
 
 			-- 't' determines where on the line the closest point is (0 = start, 1 = end)
 			local t = if segLenSq > 0 then toPlayer:Dot(displacement) / segLenSq else 0

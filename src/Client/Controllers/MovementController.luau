@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local TimeController = require(script.Parent.TimeController)
 local TweensController = require(script.Parent.TweensController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local Tools = require(ReplicatedStorage.Shared.Utils.Tools)
@@ -22,12 +23,16 @@ local WalkAnim = AnimationsFolder.Walk :: Animation
 
 local Run: AnimationTrack
 local Walk: AnimationTrack
+local Idle: AnimationTrack
 
 local Character: TCharacter.TCharacter
 local PrevAnimation: AnimationTrack?
 local PrevAnimationStop: number = 0
 local PrevAnimationTimePosition: number = 0
 local ShiftTouched: boolean = false
+
+local CurrentBaseSpeed = EMovementSpeeds.Default
+local CurrentBaseJump = EMovementJumps.Default
 
 local MovementController = {}
 
@@ -54,11 +59,24 @@ local function getAnimTime(): number
 end
 
 local function walkAnimSpeed()
-	return (Character.Humanoid.WalkSpeed * WALK_ANIM_SPEED) / EMovementSpeeds.Default
+	return ((Character.Humanoid.WalkSpeed * WALK_ANIM_SPEED) / EMovementSpeeds.Default) * TimeController.TimeScale
 end
 
 local function runAnimSpeed()
-	return (Character.Humanoid.WalkSpeed * RUN_ANIM_SPEED) / EMovementSpeeds.Running
+	return ((Character.Humanoid.WalkSpeed * RUN_ANIM_SPEED) / EMovementSpeeds.Running) * TimeController.TimeScale
+end
+
+local function updateSpeeds()
+	if not Character then return end
+	local humanoid = Character:FindFirstChild("Humanoid") :: Humanoid
+	if not humanoid then return end
+
+	humanoid.WalkSpeed = CurrentBaseSpeed * TimeController.TimeScale
+	humanoid.JumpHeight = CurrentBaseJump * TimeController.TimeScale
+
+	if Run and Run.IsPlaying then Run:AdjustSpeed(runAnimSpeed()) end
+	if Walk and Walk.IsPlaying then Walk:AdjustSpeed(walkAnimSpeed()) end
+	if Idle and Idle.IsPlaying then Idle:AdjustSpeed(0.65 * TimeController.TimeScale) end
 end
 
 local function moveDirection()
@@ -69,16 +87,20 @@ local function moveDirection()
 	if Direction == Vector3.zero or TweensController.IsImmobile then return end
 
 	if ShiftTouched and Direction.Z ~= 1 then
+		CurrentBaseSpeed = EMovementSpeeds.Running
+		CurrentBaseJump = EMovementJumps.Running
 		TweensController.SetCameraFov(ECameraFovs.Running, TweenInfo.new(1))
-		TweensController.SetSpeed(EMovementSpeeds.Running, 1)
-		TweensController.SetJump(EMovementJumps.Running, 1)
+		TweensController.SetSpeed(CurrentBaseSpeed * TimeController.TimeScale, 1)
+		TweensController.SetJump(CurrentBaseJump * TimeController.TimeScale, 1)
 		Run:Play(FADE_IN, 1, runAnimSpeed())
 		if PrevAnimation == Run then Run.TimePosition = getAnimTime() end
 		PrevAnimation = Run
 	else
+		CurrentBaseSpeed = EMovementSpeeds.Default
+		CurrentBaseJump = EMovementJumps.Default
 		TweensController.SetCameraFov(ECameraFovs.Default, TweenInfo.new(0.65))
-		TweensController.SetSpeed(EMovementSpeeds.Default, 0.65)
-		TweensController.SetJump(EMovementJumps.Default, 0.65)
+		TweensController.SetSpeed(CurrentBaseSpeed * TimeController.TimeScale, 0.65)
+		TweensController.SetJump(CurrentBaseJump * TimeController.TimeScale, 0.65)
 		Walk:Play(FADE_IN, 1, walkAnimSpeed())
 		if PrevAnimation == Walk then Walk.TimePosition = getAnimTime() end
 		PrevAnimation = Walk
@@ -114,7 +136,9 @@ MovementController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 	local animator = humanoid:FindFirstChild("Animator") :: Animator
 	if not animator then return warn(`Animator don't spawned.`) end
 
-	animator:LoadAnimation(IdleAnim):Play(0.1, 1, 0.65)
+	Idle = animator:LoadAnimation(IdleAnim)
+	Idle:Play(0.1, 1, 0.65)
+
 	Run = animator:LoadAnimation(RunAnim)
 	Walk = animator:LoadAnimation(WalkAnim)
 
@@ -122,6 +146,7 @@ MovementController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 	Connections[#Connections + 1] = humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(moveDirection)
 	Connections[#Connections + 1] = UserInputService.InputBegan:Connect(handleRunning)
 	Connections[#Connections + 1] = UserInputService.InputEnded:Connect(handleRunning)
+	Connections[#Connections + 1] = TimeController.TimeScaleChanged:Connect(updateSpeeds) :: any
 
 	humanoid.WalkSpeed = EMovementSpeeds.Default
 	humanoid.JumpHeight = EMovementJumps.Default
