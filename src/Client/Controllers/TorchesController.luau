@@ -39,7 +39,7 @@ local function isTorchLighted(torch: Torch)
 	return torch:GetAttribute("IsLighted")
 end
 
-local function lightTorch(torch: Torch, time: number?)
+local function lightTorch(torch: Torch, time: number?, deafenSound: boolean?)
 	for _, particle in torch.Effects:GetChildren() do
 		if not particle:IsA("ParticleEmitter") then continue end
 		particle.Enabled = true
@@ -57,7 +57,7 @@ local function lightTorch(torch: Torch, time: number?)
 		Brightness = FAR_LIGHT_BRIGTHNESS,
 	}):Play()
 
-	SoundsController.Play(ESounds.IgniteFlame, torch)
+	if not deafenSound then SoundsController.Play(ESounds.IgniteFlame, torch) end
 	torch:SetAttribute("IsLighted", true)
 end
 
@@ -83,15 +83,15 @@ local function unlightTorch(torch: Torch, time: number?)
 end
 
 local TorchesController = {}
-TorchesController.ROWS = 7
+TorchesController.ROWS = 4
 
-function TorchesController.Light(row: number, time: number?)
+function TorchesController.Light(row: number, time: number?, deafenSound: boolean?)
 	local rowTorches = TorchesPerRow[row]
 	if not rowTorches then return end
 
 	for _, torch in rowTorches do
 		if isTorchLighted(torch) then continue end
-		lightTorch(torch, time)
+		lightTorch(torch, time, deafenSound)
 	end
 end
 
@@ -102,6 +102,12 @@ function TorchesController.Unlight(row: number, time: number?)
 	for _, torch in rowTorches do
 		if not isTorchLighted(torch) then continue end
 		unlightTorch(torch, time)
+	end
+end
+
+function TorchesController.LightAll(deafenSound: boolean?, time: number?)
+	for i = 1, TorchesController.ROWS do
+		TorchesController.Light(i, time, deafenSound)
 	end
 end
 

@@ -7,6 +7,7 @@ local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local BossController = require(script.Parent.BossController)
 local DashController = require(script.Parent.DashController)
 local HealthController = require(script.Parent.HealthController)
+local KnockbackController = require(script.Parent.KnockbackController)
 local ParryController = require(script.Parent.ParryController)
 local SoundsController = require(script.Parent.SoundsController)
 local TimeController = require(script.Parent.TimeController)
@@ -31,23 +32,39 @@ type Projectile = {
 	} & BasePart,
 } & Model
 
+type SpellBreak = {
+	Shatter1: ParticleEmitter,
+	Shatter2: ParticleEmitter,
+	SpellBreak: Sound,
+} & Attachment
+
 local PARRY_STRENGTH = 4
 
 local Player = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 local ProjectileModel = ReplicatedStorage:WaitForChild("Models"):WaitForChild("Projectile") :: Projectile
+local ProjectileBreakEffect = ReplicatedStorage:WaitForChild("Effects"):WaitForChild("SpellBreak") :: SpellBreak
 local ProjectilesZone = CollectionService:GetTagged("ProjectilesZone")[1] :: BasePart
 local ProjectilePool = ObjectPooler.new(ProjectileModel, 200, 50, ObjectPooler.ReturnBoneModel, Workspace.Projectiles)
 local RayParams = RaycastParams.new()
 RayParams.FilterType = Enum.RaycastFilterType.Exclude
 
 local ProjectileController = {}
+ProjectileController.ProjectilesSpawnLow = CollectionService:GetTagged("ProjectilesSpawnLow")[1] :: BasePart
+ProjectileController.ProjectilesSpawnHigh = CollectionService:GetTagged("ProjectilesSpawnHigh")[1] :: BasePart
 
 function ProjectileController.OnCharacterAdded(character: TCharacter.TCharacter)
 	RayParams.FilterDescendantsInstances = { character, ProjectilesZone, BossController.GetRig() }
 end
 
-function ProjectileController.AddProjectile(initialPos: Vector3, targetPos: Vector3, speed: number, radius: number)
+function ProjectileController.AddProjectile(
+	initialPos: Vector3,
+	targetPos: Vector3,
+	speed: number,
+	radius: number,
+	damage: number?,
+	health: number?
+)
 	local model = ProjectilePool:Get() :: Projectile
 	local projectileEntity = WorldRef:EntityRef(model)
 
@@ -60,6 +77,8 @@ function ProjectileController.AddProjectile(initialPos: Vector3, targetPos: Vect
 		Components.Radius,
 		Components.Model,
 		Components.Bone,
+		Components.Health,
+		Components.Damage,
 		Tags.Projectile,
 	}, {
 		CFrame.new(initialPos, targetPos),
@@ -68,14 +87,84 @@ function ProjectileController.AddProjectile(initialPos: Vector3, targetPos: Vect
 		radius,
 		model,
 		model.Sphere.Root,
+		health or 1,
+		damage or 0,
 	})
+end
+
+function ProjectileController.AddProjectileMissile(
+	initialPos: Vector3,
+	direction: Vector3,
+	target: BasePart,
+	speed: number,
+	radius: number,
+	damage: number?,
+	health: number?
+)
+	local model = ProjectilePool:Get() :: Projectile
+	local projectileEntity = WorldRef:EntityRef(model)
+
+	model.Sphere.Root.Trail.Enabled = true
+
+	jecs.bulk_insert(World, projectileEntity, {
+		Components.CFrame,
+		Components.Direction,
+		Components.Target,
+		Components.Speed,
+		Components.Radius,
+		Components.Model,
+		Components.Bone,
+		Components.Health,
+		Components.Damage,
+		Tags.Projectile,
+	}, {
+		CFrame.new(initialPos, direction),
+		(direction - initialPos).Unit,
+		target,
+		speed,
+		radius,
+		model,
+		model.Sphere.Root,
+		health or 1,
+		damage or 0,
+	})
+end
+
+local function destroy(projectileEntity: jecs.Entity, model: Projectile)
+	WorldRef:Nuke(model, projectileEntity)
+	model.Sphere.Root.Trail.Enabled = false
+	ProjectilePool:Return(model)
 end
 
 function ProjectileController.RemoveProjectile(projectileEntity: jecs.Entity)
 	local model = World:get(projectileEntity, Components.Model) :: Projectile
-	WorldRef:Nuke(model, projectileEntity)
-	model.Sphere.Root.Trail.Enabled = false
-	ProjectilePool:Return(model)
+	destroy(projectileEntity, model)
+end
+
+function ProjectileController.BreakProjectile(projectileEntity: jecs.Entity)
+	local model = World:get(projectileEntity, Components.Model) :: Projectile
+
+	local clone = ProjectileBreakEffect:Clone()
+	local id = SoundsController.AddSound(clone.SpellBreak)
+	clone.SpellBreak.Ended:Once(function()
+		clone:Destroy()
+		SoundsController.RemoveSound(id)
+	end)
+
+	clone.CFrame = model.Sphere.Root.CFrame
+	clone.Parent = Workspace.Temporal
+
+	clone.Shatter1:Emit(20)
+	clone.Shatter2:Emit(20)
+	clone.SpellBreak:Play()
+
+	destroy(projectileEntity, model)
+end
+
+function ProjectileController.Cleanup()
+	for entity in World:query(Tags.Projectile) do
+		ProjectileController.RemoveProjectile(entity)
+	end
 end
 
 RunService.Heartbeat:Connect(function(rawDt: number)
@@ -83,56 +172,52 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 	if dt <= 0.001 then return end
 
 	local character = Player.Character
-	local characterPos = if character then character.PrimaryPart.Position else nil
+	local characterPos = if character and character.PrimaryPart then character.PrimaryPart.Position else nil
 	local bossRig = BossController.GetRig()
 	local bossRoot = if bossRig then bossRig.PrimaryPart else nil
 
-	-- Query Loop
+	-- Logic update
 	for entity, cf, direction, speed, radius in
-		World:query(Components.CFrame, Components.Direction, Components.Speed, Components.Radius)
+		World:query(Components.CFrame, Components.Direction, Components.Speed, Components.Radius, Tags.Projectile)
 	do
 		local currentPos = cf.Position
-
-		-- ================================================================================
-		-- 1. GENERIC HOMING LOGIC (Applies to everyone)
-		-- ================================================================================
 		local target = World:get(entity, Components.Target) :: BasePart
 
+		-- Target turn
 		if target and target.Parent then
 			local targetPos = target.Position
 			local currentDir = direction
 			local targetDir = (targetPos - currentPos).Unit
-
-			-- [FIX] Dynamic Homing:
-			-- We scale the turn strength by speed. Faster ball = Sharper turn required.
-			-- Base strength (4) + Speed Bonus.
 			local dynamicTurnSpeed = PARRY_STRENGTH + (speed / 40)
 
 			local newDir = currentDir:Lerp(targetDir, math.clamp(dt * dynamicTurnSpeed, 0, 1)).Unit
 			World:set(entity, Components.Direction, newDir)
-			direction = newDir -- Update local var for movement calc
+			direction = newDir
 		end
 
-		-- Calculate Displacement
 		local displacement = direction * speed * dt
 		local newPos = currentPos + displacement
 		local segLenSq = displacement.Magnitude * displacement.Magnitude
 
-		-- ================================================================================
-		-- 2. BOSS INTERACTION (If Player Parried)
-		-- ================================================================================
+		-- Boss parry / damage
 		if World:has(entity, Tags.Parried) and bossRoot then
 			local toBoss = bossRoot.Position - currentPos
 
-			-- Project boss position onto the movement path
 			local t = if segLenSq > 0 then toBoss:Dot(displacement) / segLenSq else 0
 			local clampedT = math.clamp(t, 0, 1)
 			local closestPoint = currentPos + (displacement * clampedT)
 
-			-- Check distance to the path, not just the endpoint
 			if (closestPoint - bossRoot.Position).Magnitude < 6 then
 				if BossController.CanParryProjectile(speed) then
-					-- :: BOSS PARRIES ::
+					local health = (World:get(entity, Components.Health) or 0) - 1
+
+					if health <= 0 then
+						ProjectileController.BreakProjectile(entity)
+						continue
+					end
+
+					World:set(entity, Components.Health, health - 1)
+
 					World:remove(entity, Tags.Parried)
 
 					if character then
@@ -144,81 +229,101 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 					end
 
 					World:set(entity, Components.Speed, speed * 1.1)
-					-- Reset position to impact point to prevent visual clipping
 					World:set(entity, Components.CFrame, CFrame.new(closestPoint + (direction * 2)))
-					SoundsController.PlayBoss(ESounds.Parry)
+
+					SoundsController.Play(ESounds.Parry, bossRig)
 				else
-					-- :: BOSS HIT ::
-					BossController.Damage(1)
+					BossController.Damage(World:get(entity, Components.Damage) or 0)
 					ProjectileController.RemoveProjectile(entity)
 				end
+
 				continue
 			end
 		end
 
-		-- ================================================================================
-		-- 3. PLAYER INTERACTION (If Boss Threw)
-		-- ================================================================================
+		-- Character parry / damage / dash
 		if characterPos and not World:has(entity, Tags.Parried) then
-			-- Math: Find the closest point on the line segment (current -> new) to the player
 			local toPlayer = characterPos - currentPos
 
-			-- 't' determines where on the line the closest point is (0 = start, 1 = end)
 			local t = if segLenSq > 0 then toPlayer:Dot(displacement) / segLenSq else 0
 			local clampedT = math.clamp(t, 0, 1)
 
 			local closestPointOnPath = currentPos + (displacement * clampedT)
 			local distToPath = (characterPos - closestPointOnPath).Magnitude
 
-			-- A. Parry Check (Wider Radius)
-			if distToPath < (radius * 3) and ParryController.IsParrying() then
-				local camLook = Camera.CFrame.LookVector
+			if distToPath < (radius * 3) then
+				if ParryController.IsParrying() then
+					local health = (World:get(entity, Components.Health) or 0) - 1
 
-				local speedMult = ParryController.GetChargeMultiplier()
+					if health <= 0 then
+						ProjectileController.BreakProjectile(entity)
+						ParryController.SuccessfulParry(true)
+						continue
+					end
 
-				World:add(entity, Tags.Parried)
-				if bossRoot then World:set(entity, Components.Target, bossRoot) end
+					World:set(entity, Components.Health, health - 1)
 
-				World:set(entity, Components.Direction, camLook)
-				World:set(entity, Components.Speed, speed * speedMult)
+					local camLook = Camera.CFrame.LookVector
 
-				-- Move ball to the point of impact + offset, to ensure visual clarity
-				local impactPos = closestPointOnPath
-				World:set(entity, Components.CFrame, CFrame.new(impactPos + (camLook * 3)))
+					local speedMult = ParryController.GetChargeMultiplier()
 
-				ParryController.SuccessfulParry()
-				continue
-			end
+					World:add(entity, Tags.Parried)
+					if bossRoot then World:set(entity, Components.Target, bossRoot) end
 
-			-- B. Damage Check (Strict Radius)
-			if distToPath < radius then
-				if not DashController.IsDashing() then
-					HealthController.Damage(1)
-					ProjectileController.RemoveProjectile(entity)
+					World:set(entity, Components.Direction, camLook)
+					World:set(entity, Components.Speed, speed * speedMult)
+
+					local impactPos = closestPointOnPath
+					World:set(entity, Components.CFrame, CFrame.new(impactPos + (camLook * 3)))
+
+					ParryController.SuccessfulParry()
+					continue
+				elseif DashController.IsDashing() then
+					ProjectileController.BreakProjectile(entity)
 					continue
 				end
 			end
-		end
 
-		-- ================================================================================
-		-- 4. STANDARD CHECKS
-		-- ================================================================================
+			if distToPath < radius then
+				HealthController.Damage(World:get(entity, Components.Damage) or 0)
+				KnockbackController.Knockback(direction, 1500)
+				ProjectileController.RemoveProjectile(entity)
+				continue
+			end
+		end
 
 		-- Bounds Check
 		local relPos = ProjectilesZone.CFrame:PointToObjectSpace(newPos)
 		local size = ProjectilesZone.Size
 		if math.abs(relPos.X) > size.X / 2 or math.abs(relPos.Y) > size.Y / 2 or math.abs(relPos.Z) > size.Z / 2 then
-			print("out of area")
 			ProjectileController.RemoveProjectile(entity)
 			continue
 		end
 
 		-- Wall Check
-		-- local rayResult = workspace:Raycast(currentPos, displacement, RayParams)
-		-- if rayResult then
-		-- 	ProjectileController.RemoveProjectile(entity)
-		-- 	continue
-		-- end
+		local rayResult = workspace:Raycast(currentPos, displacement, RayParams)
+		if rayResult and not rayResult.Instance:HasTag("ProjectileSafe") then
+			local currentHealth = World:get(entity, Components.Health) or 1
+			local newHealth = currentHealth - 1
+
+			if newHealth <= 0 then
+				ProjectileController.BreakProjectile(entity)
+				continue
+			end
+
+			-- Reflection Formula: r = d - 2(d • n)n
+			local normal = rayResult.Normal
+			local reflectedDir = direction - (2 * direction:Dot(normal) * normal)
+
+			World:set(entity, Components.Health, newHealth)
+			World:set(entity, Components.Direction, reflectedDir)
+
+			-- Snap to impact point with slight offset to prevent immediate re-collision
+			local impactPos = rayResult.Position + (normal * 0.1)
+			World:set(entity, Components.CFrame, CFrame.lookAt(impactPos, impactPos + reflectedDir))
+
+			continue
+		end
 
 		-- Update Position
 		local newCF = CFrame.new(newPos, newPos + direction)
@@ -230,4 +335,5 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 		bone.CFrame = cf
 	end
 end)
+
 return Ignis.Register(ProjectileController)

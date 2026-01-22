@@ -12,65 +12,78 @@ local Promise = require(ReplicatedStorage.Shared.Utils.Promise)
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
+-- Type: 'Percent' (0.1 = 10%) or 'Flat' (20 = +20)
+local UPGRADE_SCALING = {
+	[EUpgrades.Power] = { Type = "Percent", Amount = 0.10 },
+	[EUpgrades.Reflexes] = { Type = "Percent", Amount = 0.10 },
+	[EUpgrades.Mana] = { Type = "Percent", Amount = 0.20 },
+	[EUpgrades.Health] = { Type = "Flat", Amount = 20 },
+	[EUpgrades.Poison] = { Type = "Percent", Amount = 0.20 },
+	[EUpgrades.SlowTime] = { Type = "Percent", Amount = 0.10 },
+}
+
 local UPGRADES_NAME = {
-	[EUpgrades.Strength] = "Strength",
-	[EUpgrades.Speed] = "Speed",
-	[EUpgrades.Health] = "Health",
+	[EUpgrades.Power] = "Power",
+	[EUpgrades.Reflexes] = "Reflexes",
+	[EUpgrades.Health] = "Vitality",
 	[EUpgrades.Dash] = "Dash",
 	[EUpgrades.Parry] = "Parry",
-	[EUpgrades.Block] = "Block",
-	[EUpgrades.PoisonResistance] = "Poison Resistance",
-	[EUpgrades.AbilityBreak] = "Ability Break",
+	[EUpgrades.Antidote] = "Antidote",
+	[EUpgrades.Mana] = "Mana Flow",
+	[EUpgrades.Poison] = "Venomous Parry",
+	[EUpgrades.ParryGod] = "Parry God",
 }
 
 local UPGRADES_DESCRIPTION = {
-	[EUpgrades.Strength] = "Increases your raw power.\nDeals <font color='#00FF7F'><b>+20%</b></font> extra damage.",
-	[EUpgrades.Speed] = "Cripples the Demon King.\nHe becomes <font color='#FF5555'><b>10%</b></font> slower with reduced <b>Dodge/Parry</b> rates.",
-	[EUpgrades.Health] = "Fortifies your vitality.\nIncreases maximum health by <font color='#00FF7F'><b>+20%</b></font>.",
-	[EUpgrades.Dash] = "Unlocks <font color='#00FFFF'><b>Dash</b></font> ability.\nPress <font color='#FFD700'><b>[Q]</b></font> to become momentarily <b>invulnerable</b> while dashing into the direction you press.",
-	[EUpgrades.Parry] = "Unlocks <font color='#00FFFF'><b>Parry</b></font> ability.\nPress <font color='#FFD700'><b>[F]</b></font> just before being hit to <b>deflect</b> the attack.",
-	[EUpgrades.Block] = "Unlocks <font color='#00FFFF'><b>Block</b></font> recovery.\nAutomatically blocks if a Parry fails, reducing damage by <font color='#FF5555'><b>50%</b></font>.",
-	[EUpgrades.PoisonResistance] = "Builds immunity.\nGrants permanent resistance to <font color='#A020F0'><b>Poison</b></font> effects.",
-	[EUpgrades.AbilityBreak] = "Shatters defenses.\nDestroys the <font color='#FF5555'><b>Demon King's</b></font> hardened skin, allowing attacks to penetrate.",
+	[EUpgrades.Power] = "Increases raw power.\nDamage: %s",
+	[EUpgrades.Reflexes] = "Heightens senses. Projectiles appear slower.\nSpeed Reduction: %s",
+	[EUpgrades.Health] = "Fortifies vitality.\nMax Health: %s",
+	[EUpgrades.Mana] = "Expands magical capacity.\nMana: %s",
+	[EUpgrades.Poison] = "Parried projectiles become venomous.\nPoison Damage: %s",
+	[EUpgrades.SlowTime] = "Temporarily slows time.\nDuration: %s",
+
+	[EUpgrades.Antidote] = "Builds immunity.\nGrants permanent resistance to <font color='#A020F0'><b>Poison</b></font> effects.",
+	[EUpgrades.Dash] = "Unlocks <font color='#00FFFF'><b>Dash [Q]</b></font>.\nBecome <b>invulnerable</b>. Dashes break projectiles, converting them into Health and Mana.",
+	[EUpgrades.Parry] = "Unlocks <font color='#00FFFF'><b>Parry [F]</b></font>.\n<b>Deflect</b> incoming attacks. Hold to charge return speed.\n<font size='14'><i>Cannot parry Yellow projectiles.</i></font>",
+	[EUpgrades.ParryGod] = "Mastery over defense.\nAllows you to <font color='#FFD700'><b>Parry Yellow Projectiles</b></font>.",
 }
 
 local UPGRADES_IMAGES = {
-	[EUpgrades.Strength] = "rbxassetid://114904268719029",
-	[EUpgrades.Speed] = "rbxassetid://85090421547668",
+	[EUpgrades.Power] = "rbxassetid://114904268719029",
+	[EUpgrades.Reflexes] = "rbxassetid://85090421547668",
 	[EUpgrades.Health] = "rbxassetid://135331490511011",
 	[EUpgrades.Dash] = "rbxassetid://131468682765264",
 	[EUpgrades.Parry] = "rbxassetid://71534864279945",
-	[EUpgrades.Block] = "rbxassetid://128112310338378",
-	[EUpgrades.PoisonResistance] = "rbxassetid://125789700898819",
-	[EUpgrades.AbilityBreak] = "rbxassetid://99321310303969",
+	[EUpgrades.Antidote] = "rbxassetid://125789700898819",
+	[EUpgrades.Poison] = "rbxassetid://125789700898819",
 }
 
 local STACKABLE_UPGRADES = {
-	[EUpgrades.Strength] = true,
-	[EUpgrades.Speed] = true,
+	[EUpgrades.Power] = true,
+	[EUpgrades.Reflexes] = true,
 	[EUpgrades.Health] = true,
+	[EUpgrades.Mana] = true,
+	[EUpgrades.Poison] = true,
+	[EUpgrades.SlowTime] = true,
 }
 
 local UPGRADES_LIST = {
-	EUpgrades.Strength,
-	EUpgrades.Speed,
+	EUpgrades.Power,
+	EUpgrades.Reflexes,
 	EUpgrades.Health,
 	EUpgrades.Dash,
 	EUpgrades.Parry,
-	EUpgrades.Block,
-	EUpgrades.PoisonResistance,
-	EUpgrades.AbilityBreak,
+	EUpgrades.Antidote,
 }
 
 local UPGRADES_RARITIES = {
-	[EUpgrades.Strength] = ERarity.Common,
-	[EUpgrades.Speed] = ERarity.Common,
+	[EUpgrades.Power] = ERarity.Common,
+	[EUpgrades.Reflexes] = ERarity.Common,
 	[EUpgrades.Health] = ERarity.Common,
 	[EUpgrades.Dash] = ERarity.Uncommon,
 	[EUpgrades.Parry] = ERarity.Uncommon,
-	[EUpgrades.Block] = ERarity.Rare,
-	[EUpgrades.PoisonResistance] = ERarity.Rare,
-	[EUpgrades.AbilityBreak] = ERarity.Epic,
+	[EUpgrades.Antidote] = ERarity.Rare,
+	[EUpgrades.SlowTime] = ERarity.Epic,
 }
 
 local RARITY_COLORS = {
@@ -81,7 +94,7 @@ local RARITY_COLORS = {
 }
 
 local UpgradesController = {}
-local OwnedUpgrades: { [number]: true } = {}
+local OwnedUpgrades: { [number]: number } = {}
 local CurrentPromise: Promise.Promise?
 local UI: UpgradeUI.UpgradeUIReturn
 local OnUpgradeSelected: ((upgradeId: number) -> ())?
@@ -95,6 +108,28 @@ Fluid.mount(function()
 	})
 	return UI.UI
 end, PlayerGui)
+
+local function formatStat(value: number, type: string): string
+	if type == "Percent" then return string.format("%.0f%%", value * 100) end
+	return tostring(value)
+end
+
+local function getDescription(upgradeId: number, currentLevel: number): string
+	local template = UPGRADES_DESCRIPTION[upgradeId] or "No description."
+	local scaling = UPGRADE_SCALING[upgradeId]
+
+	if scaling then
+		local nextLevel = currentLevel + 1
+		local curVal = formatStat(currentLevel * scaling.Amount, scaling.Type)
+		local nextVal = formatStat(nextLevel * scaling.Amount, scaling.Type)
+
+		local statChange = string.format("<font color='#00FF7F'><b>%s -> %s</b></font>", curVal, nextVal)
+
+		return string.format(template, statChange)
+	end
+
+	return template
+end
 
 local function fillUpgrades(inputUpgrades: { number }?): { number }
 	local result = inputUpgrades and table.clone(inputUpgrades) or {}
@@ -125,6 +160,20 @@ local function fillUpgrades(inputUpgrades: { number }?): { number }
 	return result
 end
 
+function UpgradesController.AddUpgrade(upgradeId: number)
+	local currentLevel = OwnedUpgrades[upgradeId] or 0
+	OwnedUpgrades[upgradeId] = currentLevel + 1
+
+	if upgradeId == EUpgrades.Health then
+		local config = UPGRADE_SCALING[EUpgrades.Health]
+		local amountToAdd = config.Amount
+		local newMax = HealthController.GetMaxHealth() + amountToAdd
+		HealthController.SetMaxHealth(newMax)
+	elseif upgradeId == EUpgrades.Power then
+		-- TODO: Update Damage multipliers
+	end
+end
+
 function UpgradesController.Show(upgrades: { number }?, fill: boolean?): Promise.Promise
 	if CurrentPromise then CurrentPromise:cancel() end
 	CameraController.ShowMouse()
@@ -138,26 +187,19 @@ function UpgradesController.Show(upgrades: { number }?, fill: boolean?): Promise
 
 	CurrentPromise = Promise.new(function(resolve, _, onCancel)
 		OnUpgradeSelected = function(id: number)
-			OwnedUpgrades[id] = true
-
-			if id == EUpgrades.Health then
-				-- TODO: Increase player health by 20%
-				HealthController.SetMaxHealth(HealthController.GetMaxHealth())
-			elseif id == EUpgrades.Strength then
-				-- TODO: Increase player strength
-			end
-
+			UpgradesController.AddUpgrade(id)
 			resolve(id)
 		end
 
 		for _, upgradeId in upgradesList do
 			local rarity = UPGRADES_RARITIES[upgradeId]
 			local color = RARITY_COLORS[rarity] or ColorSequence.new(Color3.new(1, 1, 1))
+			local currentLevel = OwnedUpgrades[upgradeId] or 0
 
 			UI.SpawnCard({
 				Id = upgradeId,
 				Name = UPGRADES_NAME[upgradeId],
-				Description = UPGRADES_DESCRIPTION[upgradeId],
+				Description = getDescription(upgradeId, currentLevel),
 				GradientColor = color,
 				Image = UPGRADES_IMAGES[upgradeId],
 			})
@@ -179,14 +221,23 @@ function UpgradesController.Show(upgrades: { number }?, fill: boolean?): Promise
 	return CurrentPromise :: Promise.Promise
 end
 
+function UpgradesController.GetUpgradeLevel(upgrade: number): number
+	return OwnedUpgrades[upgrade] or 0
+end
+
 function UpgradesController.HasUpgrade(upgrade: number)
-	return OwnedUpgrades[upgrade]
+	return OwnedUpgrades[upgrade] ~= nil
 end
 
 function UpgradesController.RemoveUpgrade(upgrade: number)
-	if not OwnedUpgrades[upgrade] then return end
+	local currentLevel = OwnedUpgrades[upgrade]
+	if not currentLevel then return end
 
-	OwnedUpgrades[upgrade] = nil
+	if currentLevel > 1 then
+		OwnedUpgrades[upgrade] = currentLevel - 1
+	else
+		OwnedUpgrades[upgrade] = nil
+	end
 
 	-- TODO: Remove data, like the 20% of the health added.
 end

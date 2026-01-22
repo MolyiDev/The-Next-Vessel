@@ -6,6 +6,9 @@ local SoundsController = require(script.Parent.SoundsController)
 local TimeController = require(script.Parent.TimeController)
 local TweensController = require(script.Parent.TweensController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
+local jecs = require(ReplicatedStorage.Packages.jecs)
+local Components = require(ReplicatedStorage.Shared.ECS.Components)
+local World = require(ReplicatedStorage.Shared.ECS.Worlds.World)
 local Tools = require(ReplicatedStorage.Shared.Utils.Tools)
 local EDirections = require(ReplicatedStorage.Types.Enums.EDirections)
 local ESounds = require(ReplicatedStorage.Types.Enums.ESounds)
@@ -18,7 +21,7 @@ local TCharacter = require(ReplicatedStorage.Types.TCharacter)
 local DASH_DURATION = 0.5
 local DASH_INITIAL_SPEED = 70
 local DASH_FINAL_SPEED = 25
-local DASH_COOLDOWN = 2.5
+local DASH_COOLDOWN = 1.5
 
 local AnimationsFolder = ReplicatedStorage.Animations
 local DashAnimationsFolder = AnimationsFolder.Dash
@@ -132,11 +135,14 @@ function DashController.IsDashing()
 	return (time() - DashController.LastDashTime) <= DASH_DURATION
 end
 
-function DashController.OnCharacterAdded(character: TCharacter.TCharacter)
-	local humanoid = character:FindFirstChild("Humanoid") :: Humanoid
-	if not humanoid then return end
-	local animator = humanoid:FindFirstChild("Animator") :: Animator
-	if not animator then return end
+function DashController.OnCharacterAdded(character: TCharacter.TCharacter, characterEntity: jecs.Entity)
+	local humanoid = World:get(characterEntity, Components.Humanoid)
+	local animator = World:get(characterEntity, Components.Animator)
+
+	if not humanoid or not animator then
+		warn("Humanoid / Animator are nil")
+		return
+	end
 
 	Character = character
 
@@ -198,7 +204,7 @@ end)
 
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp or input.KeyCode ~= Enum.KeyCode.Q then return end
-	-- if not UpgradesController.HasUpgrade(EUpgrades.Dash) then return end
+	if not UpgradesController.HasUpgrade(EUpgrades.Dash) then return end
 	DashController.Dash()
 end)
 

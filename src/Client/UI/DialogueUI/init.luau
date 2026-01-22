@@ -127,7 +127,7 @@ return function(): DialogueUIReturn
 				create("UIGradient")({
 					Color = ColorSequence.new({
 						ColorSequenceKeypoint.new(0, Color3.new()),
-						ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 60, 60)),
+						ColorSequenceKeypoint.new(1, Color3.fromRGB(40, 40, 40)),
 					}),
 					Rotation = -90,
 				}),

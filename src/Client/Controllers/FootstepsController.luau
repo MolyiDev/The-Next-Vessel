@@ -2,6 +2,9 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundService = game:GetService("SoundService")
 local SoundsController = require(script.Parent.SoundsController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
+local jecs = require(ReplicatedStorage.Packages.jecs)
+local Components = require(ReplicatedStorage.Shared.ECS.Components)
+local World = require(ReplicatedStorage.Shared.ECS.Worlds.World)
 
 local AnimatorConnection: RBXScriptConnection?
 local EffectsGroup = SoundService:WaitForChild("Effects") :: SoundGroup
@@ -18,25 +21,21 @@ local MAX_SPEED = 1.06
 
 local FootstepsController = {}
 
-function FootstepsController.OnCharacterAdded(character: Model)
-	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
-	local humanoidRootPart = character:WaitForChild("HumanoidRootPart") :: BasePart
-	local animator = humanoid:WaitForChild("Animator") :: Animator
-	if not humanoid or not humanoidRootPart or not animator then
-		warn(`Humanoid or RootPart or Animator don't spawned.`)
+function FootstepsController.OnCharacterAdded(_, characterEntity: jecs.Entity)
+	local humanoid = World:get(characterEntity, Components.Humanoid)
+	local humanoidRootPart = World:get(characterEntity, Components.HumanoidRootPart)
+	local animator = World:get(characterEntity, Components.Animator)
+	local butler = World:get(characterEntity, Components.Butler)
+
+	if not humanoid or not humanoidRootPart or not animator or not butler then
+		warn("Humanoid / HumanoidRootPart / Animator / Butler are nil")
 		return
 	end
 
-	if AnimatorConnection then
-		AnimatorConnection:Disconnect()
-		AnimatorConnection = nil
-		return
-	end
-
-	AnimatorConnection = animator.AnimationPlayed:Connect(function(animationTrack: AnimationTrack)
+	butler:Connect(animator.AnimationPlayed, function(animationTrack: AnimationTrack)
 		if not AnimationNames[animationTrack.Animation.Name] then return end
 
-		local Connection = animationTrack:GetMarkerReachedSignal("Footstep"):Connect(function()
+		local cn = butler:Connect(animationTrack:GetMarkerReachedSignal("Footstep"), function()
 			local MaterialName = humanoid.FloorMaterial.Name
 			if MaterialName == "Air" then return end
 			local Sounds = FootstepsSounds[MaterialName]:GetChildren()
@@ -52,7 +51,7 @@ function FootstepsController.OnCharacterAdded(character: Model)
 			tremoloSound.Parent = SelectedSound
 			local id = SoundsController.AddSound(SelectedSound)
 
-			SelectedSound.Ended:Once(function()
+			butler:Once(SelectedSound.Ended, function()
 				SoundsController.RemoveSound(id)
 				SelectedSound:Destroy()
 			end)
@@ -60,8 +59,8 @@ function FootstepsController.OnCharacterAdded(character: Model)
 			SelectedSound:Play()
 		end)
 
-		animationTrack.Stopped:Once(function()
-			Connection:Disconnect()
+		butler:Once(animationTrack.Stopped, function()
+			butler:Remove(cn)
 		end)
 	end)
 end

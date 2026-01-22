@@ -6,11 +6,12 @@ local MaxHealth = 100
 local IsDead = false
 
 local HealthController = {}
-HealthController.Died = Signal.new()
-HealthController.Revived = Signal.new()
-HealthController.Damaged = Signal.new() :: Signal.Signal<number> -- damage
-HealthController.HealthChanged = Signal.new() :: Signal.Signal<number, number> -- old, new
-HealthController.MaxHealthChanged = Signal.new() :: Signal.Signal<number, number> -- old, new
+HealthController.OnDead = Signal.new()
+HealthController.OnRevived = Signal.new()
+HealthController.OnDamaged = Signal.new() :: Signal.Signal<number, number, number> -- old, new, damage amount
+HealthController.OnHealed = Signal.new() :: Signal.Signal<number, number, number> -- old, new, heal amount
+HealthController.OnHealthChanged = Signal.new() :: Signal.Signal<number, number> -- old, new
+HealthController.OnMaxHealthChanged = Signal.new() :: Signal.Signal<number, number> -- old, new
 
 function HealthController.GetHealth()
 	return Health
@@ -20,45 +21,62 @@ function HealthController.GetMaxHealth()
 	return MaxHealth
 end
 
-function HealthController.SetHealth(value: number)
-	HealthController.HealthChanged:Fire(Health, value)
+function HealthController.IsDead()
+	return IsDead
+end
 
-	if value <= 0 then
-		IsDead = true
-		HealthController.Died:Fire()
+function HealthController.SetHealth(value: number)
+	local newHealth = math.clamp(value, 0, MaxHealth)
+
+	if newHealth == Health then return end
+
+	local oldHealth = Health
+	local diff = newHealth - oldHealth
+
+	Health = newHealth
+
+	if newHealth <= 0 then
+		if not IsDead then
+			IsDead = true
+			HealthController.OnDead:Fire()
+		end
 	end
 
-	Health = math.clamp(value, 0, MaxHealth)
+	if diff < 0 then
+		local damage = math.abs(diff)
+		HealthController.OnDamaged:Fire(oldHealth, newHealth, damage)
+	elseif diff > 0 then
+		local healed = diff
+		HealthController.OnHealed:Fire(oldHealth, newHealth, healed)
+	end
+
+	HealthController.OnHealthChanged:Fire(oldHealth, newHealth)
 end
 
 function HealthController.SetMaxHealth(value: number)
-	HealthController.MaxHealthChanged:Fire(MaxHealth, value)
+	HealthController.OnMaxHealthChanged:Fire(MaxHealth, value)
 	MaxHealth = value
 end
 
 function HealthController.Damage(value: number)
-	print("damagePlayer")
-	local health = Health - value
-	HealthController.SetHealth(health)
+	HealthController.SetHealth(Health - value)
 end
 
 function HealthController.Heal(value: number)
-	local health = Health + value
-	HealthController.SetHealth(health)
+	HealthController.SetHealth(Health + value)
 end
 
 function HealthController.Revive()
-	IsDead = false
 	Health = MaxHealth
-	HealthController.Revived:Fire()
+
+	if not IsDead then return end
+
+	IsDead = false
+	HealthController.OnRevived:Fire()
 end
 
 function HealthController.Kill()
 	HealthController.SetHealth(0)
-end
-
-function HealthController.IsDead()
-	return IsDead
 end
 
 return HealthController

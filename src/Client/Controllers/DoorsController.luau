@@ -131,4 +131,14 @@ function DoorsController.IsClosed()
 	return false
 end
 
+function DoorsController.PlayCloseSound()
+	local door = CollectionService:GetTagged("Door")[1]
+	if door and door.Parent then SoundsController.Play(ESounds.CloseDoor, door.Parent) end
+end
+
+function DoorsController.PlayOpenSound()
+	local door = CollectionService:GetTagged("Door")[1]
+	if door and door.Parent then SoundsController.Play(ESounds.OpenDoor, door.Parent) end
+end
+
 return DoorsController

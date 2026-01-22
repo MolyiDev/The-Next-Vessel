@@ -1,5 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ColliderControler = require(script.Parent.Parent.Controllers.ColliderControler)
+local BossProjectilesController = require(script.Parent.Parent.Controllers.BossController.BossProjectilesController)
+local TimeController = require(script.Parent.Parent.Controllers.TimeController)
+local TweensController = require(script.Parent.Parent.Controllers.TweensController)
 local FlamesController = require(script.Parent.Parent.Controllers.FlamesController)
 local HealthController = require(script.Parent.Parent.Controllers.HealthController)
 local TeleportController = require(script.Parent.Parent.Controllers.TeleportController)
@@ -37,18 +39,13 @@ function Scene_Second.Start()
 	Scene_Second.ShouldRestart = true
 
 	Scene_Second.CurrentPromise = Promise.new(function(resolve, _, _)
-		DoorsController.Open()
+		TorchesController.LightAll()
+		TweensController.SetImmobile(true)
+		DoorsController.PlayCloseSound()
 		resolve()
 	end)
 		:andThen(function()
-			return ColliderControler.WaitForPlayer(ColliderControler.EnterCollider)
-		end)
-		:andThen(function()
-			DoorsController.Close()
-			return Promise.delay(1)
-		end)
-		:andThen(function()
-			return TorchesController.LightAllTorchesInSequence(0.5)
+			return Promise.delay(0.5)
 		end)
 		:andThen(function()
 			return DialogueController.Talk({ Id = ECharacters.Hero, Dialogue = EDialogue.Second_Hero_0 })
@@ -58,17 +55,23 @@ function Scene_Second.Start()
 		end)
 		:andThen(function()
 			Scene_Second.ShouldRestart = false
-			-- Throw trident to the player
-			-- Slow down time and wait for the player to react
+			BossProjectilesController.ShootFirst()
 
-			-- Wait for the player to parry/dodge while showing the key to parry/dodge
-			if UpgradesController.HasUpgrade(EUpgrades.Dash) then
-				--
-			elseif UpgradesController.HasUpgrade(EUpgrades.Parry) then
-				--
-			end
+			return Promise.delay(0.2):andThen(function()
+				-- Slow down time and wait for the player to react
+				TimeController.Slow(0.2, 1)
+
+				if UpgradesController.HasUpgrade(EUpgrades.Dash) then
+					-- If the player has a dash, show the key 'Q' in screen and say to the player that they can dash.
+					-- Wait for the player to dash
+				elseif UpgradesController.HasUpgrade(EUpgrades.Parry) then
+					-- If the player has a parry, show the key 'Right click' in the screen and say to the player that they can parry
+					-- Wait for the player to parry
+				end
+			end)
 		end)
 		:andThen(function()
+			TimeController.Resume(1)
 			-- If the player reacted to the quick action
 			if not HealthController.IsDead() then
 				return DialogueController.Talk({ Id = ECharacters.DemonKing, Dialogue = EDialogue.Second_DemonKing_1 })
@@ -111,14 +114,7 @@ function Scene_Second.Start()
 			return DialogueController.Talk({ Id = ECharacters.God, Dialogue = EDialogue.Second_White_0 })
 		end)
 		:andThen(function()
-			-- Depending on the attacks that killed the player different wishes will appear on death:
-			-- If the player died because of an attack that is deflectable and doesnt have the deflect then the wish 'Be able to deflect attacks' will appear
-			-- If the player died because of an attack that is not deflectable and doesnt have the dodge then the wish 'Be able to dodge attacks' will appear
-			-- If the player died while the boss was 'hardened' and doesnt have the ability to break the 'hardened skin' then the wish 'Be able to break harden' will appear
-			-- If the player died because of the boss poison and doesnt have the poison resistance  then the wish 'Be able to withstand poison' will appear
-			-- If the player died after failing a parry and doesnt have the ability to block then the wish 'Be able to block' will appear
-
-			return UpgradesController.Show({}, true)
+			return UpgradesController.Show({ EUpgrades.Dash }, true)
 		end)
 		:andThen(function(upgradeId: number)
 			Scene_Second.SelectedUpgrade = upgradeId

@@ -1,7 +1,5 @@
-local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local TimeController = require(script.Parent.Parent.Controllers.TimeController)
-local ProjectileController = require(script.Parent.Parent.Controllers.ProjectileController)
+local TweensController = require(script.Parent.Parent.Controllers.TweensController)
 local ColliderControler = require(script.Parent.Parent.Controllers.ColliderControler)
 local UpgradesController = require(script.Parent.Parent.Controllers.UpgradesController)
 local FlamesController = require(script.Parent.Parent.Controllers.FlamesController)
@@ -10,8 +8,8 @@ local DoorsController = require(script.Parent.Parent.Controllers.DoorsController
 local HealthController = require(script.Parent.Parent.Controllers.HealthController)
 local TorchesController = require(script.Parent.Parent.Controllers.TorchesController)
 local TeleportController = require(script.Parent.Parent.Controllers.TeleportController)
-local BossController = require(script.Parent.Parent.Controllers.BossController)
 local TridentController = require(script.Parent.Parent.Controllers.BossController.TridentController)
+local BossProjectilesController = require(script.Parent.Parent.Controllers.BossController.BossProjectilesController)
 local Promise = require(ReplicatedStorage.Shared.Utils.Promise)
 local ECharacters = require(ReplicatedStorage.Types.Enums.ECharacters)
 local EDialogue = require(ReplicatedStorage.Types.Enums.EDialogue)
@@ -39,6 +37,8 @@ function Scene_First.CharacterDied()
 end
 
 function Scene_First.Start()
+	HealthController.Revive()
+
 	Scene_First.IsActive = true
 	Scene_First.ShouldRestart = true
 	Scene_First.SelectedUpgrade = nil
@@ -51,20 +51,12 @@ function Scene_First.Start()
 			return ColliderControler.WaitForPlayer(ColliderControler.EnterCollider)
 		end)
 		:andThen(function()
+			TweensController.SetImmobile(true)
 			DoorsController.Close()
-			return Promise.delay(1)
+			return Promise.delay(0.75)
 		end)
 		:andThen(function()
-			local character = Players.LocalPlayer.Character
-			if not character then return end
-			ProjectileController.AddProjectile(
-				BossController.GetCurrentPosition(),
-				character.PrimaryPart.Position,
-				80,
-				2.5
-			)
-			return Promise.delay(99999)
-			-- return TorchesController.LightAllTorchesInSequence(0.5)
+			return TorchesController.LightAllTorchesInSequence(0.5)
 		end)
 		:andThen(function()
 			return DialogueController.Talk({ Id = ECharacters.Hero, Dialogue = EDialogue.First_Hero_0 })
@@ -73,11 +65,11 @@ function Scene_First.Start()
 			return DialogueController.Talk({ Id = ECharacters.DemonKing, Dialogue = EDialogue.First_DemonKing_0 })
 		end)
 		:andThen(function()
-			return TridentController.Throw()
-		end)
-		:andThen(function(resultTrident: string)
 			Scene_First.ShouldRestart = false
-			HealthController.Kill()
+			BossProjectilesController.ShootFirst(20)
+			return Promise.fromEvent(HealthController.OnDead :: any)
+		end)
+		:andThen(function()
 			TeleportController.Teleport(ELocations.SoulRealm)
 			return Promise.delay(1.5)
 		end)
@@ -118,12 +110,12 @@ function Scene_First.Start()
 			return Promise.delay(1)
 		end)
 		:andThen(function()
-			HealthController.Revive()
 			Scene_First.ShouldRestart = true
 			Scene_First.IsActive = false
 			Scene_First.SelectedUpgrade = nil
+			print(2)
 
-			return EScenes.Second
+			return EScenes.Third
 		end)
 		:catch(function(err)
 			warn("[Scene_First] Error:", err)

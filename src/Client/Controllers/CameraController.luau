@@ -1,20 +1,32 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local UserGameSettings = UserSettings():GetService("UserGameSettings")
+local TimeController = require(script.Parent.TimeController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
+local jecs = require(ReplicatedStorage.Packages.jecs)
+local Components = require(ReplicatedStorage.Shared.ECS.Components)
+local World = require(ReplicatedStorage.Shared.ECS.Worlds.World)
+local Tools = require(ReplicatedStorage.Shared.Utils.Tools)
 local ECameraFovs = require(ReplicatedStorage.Types.Enums.ECameraFovs)
 local TCharacter = require(ReplicatedStorage.Types.TCharacter)
+
+type ShakeInstance = {
+	Magnitude: number,
+	Roughness: number,
+	Duration: number,
+	FadeOut: number,
+	PosInf: Vector3,
+	RotInf: Vector3,
+	StartTime: number,
+	Seed: number,
+}
 
 local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
 local Camera = Workspace.CurrentCamera
-
-Camera.FieldOfView = ECameraFovs.Default
-Camera.CameraType = Enum.CameraType.Scriptable
 
 local CameraYaw = 0
 local CameraPitch = 0
@@ -25,6 +37,8 @@ local OscX = 0
 local SwayYaw = 0
 local VelTilt = 0
 
+local AccumulatedTime = 0
+
 local CameraSensitivity = 0.15
 local MaxOffset = 25
 
@@ -33,6 +47,8 @@ local Config = {
 	Walk = { Threshold = 10, Freq = 15, Amp = 17 },
 	Run = { Threshold = 18, Freq = 16, Amp = 18 },
 }
+
+local ActiveShakes: { ShakeInstance } = {}
 
 local Humanoid: Humanoid
 local HumanoidRootPart: BasePart
@@ -81,194 +97,190 @@ function CameraController.UpdateRotation()
 	CameraYaw = ry
 end
 
-local function randomizeOffset(magnitude: number, positionInfluence: Vector3, rotationInfluence: Vector3)
-	-- Random position
-	local positionOffset: Vector3 =
-		Vector3.new(math.random(-1, 1) * magnitude, math.random(-1, 1) * magnitude, math.random(-1, 1) * magnitude)
-	positionOffset *= positionInfluence
-
-	-- Random rotation
-	local rotationOffset: Vector3 =
-		Vector3.new(math.random(-1, 1) * magnitude, math.random(-1, 1) * magnitude, math.random(-1, 1) * magnitude)
-	rotationOffset *= rotationInfluence
-
-	-- Combine into CFrame
-	local offsetCF: CFrame = CFrame.new(positionOffset)
-		* CFrame.Angles(math.rad(rotationOffset.X), math.rad(rotationOffset.Y), math.rad(rotationOffset.Z))
-	return offsetCF
-end
-
--- Should take the next values:
---
--- Magnitude
--- How vigorous the shake will be; how far in each direaction the camera can shake
--- Higher number, more strength
---
--- Roughness
--- Determines how 'rough' the shaking will be
--- Higher number = smoother, lower number = sharper
--- The time, in secods, each jut in a direction will take
---
--- Duration
--- How long the shake will last, in secods
---
--- PositionInfluence
--- How much the shake will affect each positional axis
--- Relative to world
---
--- RotationInfluence
--- How much the shake will affect each positional axis
--- Relative to world
---
--- FadeOut
--- The amount the Magnitude will fade out by along the duration of the shake (substracted each frame)
--- Higher number = faster fade out
 function CameraController.Shake(
 	magnitude: number,
 	roughness: number,
 	duration: number,
-	positionInfluence: Vector3,
-	rotationInfluence: Vector3,
-	fadeOut: number
+	positionInfluence: Vector3?,
+	rotationInfluence: Vector3?,
+	fadeOut: number?
 )
-	local magnitudeCopy: number = magnitude
-	local startTime = os.clock()
-
-	repeat
-		-- Get a random offsetted CFrame based on CameraShake.new values
-		local offsetCF: CFrame = randomizeOffset(magnitude, positionInfluence, rotationInfluence)
-
-		RunService.RenderStepped:Wait()
-		local beforeCF = Camera.CFrame
-		local goalCF = beforeCF * offsetCF
-
-		local lerpStart = os.clock()
-
-		repeat
-			goalCF = beforeCF * offsetCF
-			Camera.CFrame = Camera.CFrame:Lerp(goalCF, 0.5)
-			RunService.RenderStepped:Wait()
-		until os.clock() - lerpStart >= roughness / 100
-
-		magnitude = math.clamp(magnitude - fadeOut, 0, magnitudeCopy)
-
-	until os.clock() - startTime >= duration
+	ActiveShakes[#ActiveShakes + 1] = {
+		Magnitude = magnitude,
+		Roughness = roughness,
+		Duration = duration,
+		FadeOut = fadeOut or 0,
+		PosInf = positionInfluence or Vector3.new(0.1, 0.1, 0.1),
+		RotInf = rotationInfluence or Vector3.new(1, 1, 1),
+		StartTime = AccumulatedTime,
+		Seed = math.random() * 1000,
+	}
 end
 
-local Connection: RBXScriptConnection
+local function computeShakeOffset(): CFrame
+	local now = AccumulatedTime
+	local totalPos = Vector3.zero
+	local totalRot = Vector3.zero
 
-local function Lerp(a: number, b: number, t: number)
-	return a + (b - a) * t
+	for i = #ActiveShakes, 1, -1 do
+		local shake = ActiveShakes[i]
+		if not shake then table.remove(ActiveShakes, i) end
+
+		local elapsed = now - shake.StartTime
+
+		if elapsed >= shake.Duration then
+			table.remove(ActiveShakes, i)
+			continue
+		end
+
+		local alpha = 1 - (elapsed / shake.Duration)
+		local currentMag = shake.Magnitude * alpha
+
+		local freq = 4 / math.max(shake.Roughness, 0.01)
+		local t = now * freq
+
+		local nX = (math.noise(t, shake.Seed, 1) * 2)
+		local nY = (math.noise(t, shake.Seed, 2) * 2)
+		local nZ = (math.noise(t, shake.Seed, 3) * 2)
+
+		local pX = (math.noise(t, shake.Seed, 4) * 2)
+		local pY = (math.noise(t, shake.Seed, 5) * 2)
+		local pZ = (math.noise(t, shake.Seed, 6) * 2)
+
+		totalRot += Vector3.new(nX, nY, nZ) * shake.RotInf * currentMag
+		totalPos += Vector3.new(pX, pY, pZ) * shake.PosInf * currentMag
+	end
+
+	return CFrame.new(totalPos) * CFrame.Angles(math.rad(totalRot.X), math.rad(totalRot.Y), math.rad(totalRot.Z))
 end
 
-local function UpdateCamera(dt: number)
-	dt *= 60
+local function UpdateCamera(rawDt: number)
+	local dt = TimeController.GetDeltaTime(rawDt)
+	AccumulatedTime += dt -- Raw time for sine waves (correct)
+
+	local scaledDt = dt * 60 -- Scaled time for Lerps
 
 	UserInputService.MouseBehavior = CameraController.CameraLocked and Enum.MouseBehavior.LockCenter
 		or Enum.MouseBehavior.Default
 
-	if Humanoid.AutoRotate then
-		local velocity = HumanoidRootPart.AssemblyAngularVelocity
-		local speed = Vector3.new(velocity.x, 0, velocity.z).magnitude
+	local shakeCF = computeShakeOffset()
 
-		local freq = 0
-		local amp = 0
+	if not Humanoid.AutoRotate then
+		local viewportSize = Camera.ViewportSize
+		local OffsetX = ((Mouse.X - viewportSize.X / 2) / (viewportSize.X / 2)) * MaxOffset
+		local OffsetY = ((Mouse.Y - viewportSize.Y / 2) / (viewportSize.Y / 2)) * MaxOffset
 
-		if speed > Config.Run.Threshold then
-			freq = Config.Run.Freq
-			amp = Config.Run.Amp
-		elseif speed > Config.Walk.Threshold then
-			freq = Config.Walk.Freq
-			amp = Config.Walk.Amp
-		elseif speed > Config.Idle.Threshold then
-			freq = Config.Idle.Freq
-			amp = Config.Idle.Amp
-		end
+		Camera.Focus = Camera.CameraSubject.CFrame
+		Camera.CFrame = Camera.Focus
+			* CFrame.Angles(math.rad(-OffsetY * CameraSensitivity), math.rad(-OffsetX * CameraSensitivity), 0)
+			* shakeCF
+			* CFrame.new(0, 0.75, -0.1)
 
-		RandomPitch = Lerp(
-			RandomPitch,
-			math.cos(tick() * 0.5 * math.random(10, 15)) * ((math.random(5, 200) / 200) * dt),
-			0.05 * dt
-		)
-
-		RandomRoll =
-			Lerp(RandomRoll, math.cos(tick() * 0.5 * math.random(5, 10)) * ((math.random(2, 10) / 200) * dt), 0.05 * dt)
-
-		local walkSpeed = math.max(Humanoid.WalkSpeed, 0.01)
-
-		VelTilt = math.clamp(
-			Lerp(VelTilt, Camera.CFrame:VectorToObjectSpace(velocity / walkSpeed).x * 0.08, 0.1 * dt),
-			-0.35,
-			0.2
-		)
-
-		MouseDrift = Lerp(MouseDrift, math.clamp(UserInputService:GetMouseDelta().X, -5, 5), 0.25 * dt)
-		OscX = Lerp(OscX, (math.sin(tick() * freq) / 5) * math.min(1, amp / 10), 0.25 * dt)
-
-		if speed > 1 then
-			SwayYaw = Lerp(SwayYaw, math.cos(tick() * 0.5 * math.floor(freq)) * (freq / 200), 0.25 * dt)
-		else
-			SwayYaw = Lerp(SwayYaw, 0, 0.05 * dt)
-		end
-
-		Camera.CFrame = Camera.CFrame
-				* CFrame.fromEulerAnglesXYZ(0, 0, math.rad(MouseDrift))
-				* CFrame.fromEulerAnglesXYZ(math.rad(OscX * dt), math.rad(SwayYaw * dt), VelTilt)
-				* CFrame.Angles(0, 0, math.rad(OscX * dt * (speed / 5)))
-				* CFrame.fromEulerAnglesXYZ(math.rad(RandomPitch), math.rad(RandomRoll), math.rad(RandomRoll * 10))
-			+ Humanoid.CameraOffset
-
-		local mouseDelta = UserInputService:GetMouseDelta()
-		local mouseSensitivity = UserGameSettings.MouseSensitivity
-
-		CameraYaw = CameraYaw + math.rad(mouseDelta.x * 0.25 * mouseSensitivity * -1)
-		CameraPitch =
-			math.clamp(CameraPitch + math.rad(mouseDelta.y * 0.25 * mouseSensitivity * -1), math.rad(-75), math.rad(75))
-
-		Camera.Focus = CFrame.new((Camera.CameraSubject :: BasePart).Position)
-
-		Camera.CFrame = Camera.Focus * CFrame.fromEulerAnglesYXZ(CameraPitch, CameraYaw, 0) * CFrame.new(0, 0.75, -0.1)
-
-		local _, y, _ = Camera.CFrame:ToOrientation()
-		HumanoidRootPart.CFrame = CFrame.new(HumanoidRootPart.Position) * CFrame.Angles(0, y, 0)
-
+		CameraController.UpdateRotation()
+		Camera.CFrame = Camera.CFrame + Humanoid.CameraOffset
 		return
 	end
 
-	local viewportSize = Camera.ViewportSize
+	local mouseDelta = UserInputService:GetMouseDelta()
+	local mouseSensitivity = UserGameSettings.MouseSensitivity
 
-	local OffsetX = ((Mouse.X - viewportSize.X / 2) / (viewportSize.X / 2)) * MaxOffset
-	local OffsetY = ((Mouse.Y - viewportSize.Y / 2) / (viewportSize.Y / 2)) * MaxOffset
+	CameraYaw = CameraYaw + math.rad(mouseDelta.x * 0.25 * mouseSensitivity * -1)
+	CameraPitch =
+		math.clamp(CameraPitch + math.rad(mouseDelta.y * 0.25 * mouseSensitivity * -1), math.rad(-75), math.rad(75))
 
-	Camera.Focus = Camera.CameraSubject.CFrame
-	Camera.CFrame = Camera.Focus
-		* CFrame.Angles(math.rad(-OffsetY * CameraSensitivity), math.rad(-OffsetX * CameraSensitivity), 0)
-		* CFrame.new(0, 0.75, -0.1)
+	Camera.Focus = CFrame.new((Camera.CameraSubject :: BasePart).Position)
 
-	CameraController.UpdateRotation()
+	local baseCFrame = Camera.Focus * CFrame.fromEulerAnglesYXZ(CameraPitch, CameraYaw, 0) * CFrame.new(0, 0.75, -0.1)
 
-	Camera.CFrame = Camera.CFrame + Humanoid.CameraOffset
+	local velocity = HumanoidRootPart.AssemblyAngularVelocity
+	local speed = Vector3.new(velocity.x, 0, velocity.z).magnitude
+
+	local freq = 0
+	local amp = 0
+
+	if speed > Config.Run.Threshold then
+		freq = Config.Run.Freq
+		amp = Config.Run.Amp
+	elseif speed > Config.Walk.Threshold then
+		freq = Config.Walk.Freq
+		amp = Config.Walk.Amp
+	elseif speed > Config.Idle.Threshold then
+		freq = Config.Idle.Freq
+		amp = Config.Idle.Amp
+	end
+
+	-- FIX 1: Clamp Max Alpha to 0.5.
+	-- If FPS is low, we want the camera to "drag" slightly behind the target
+	-- to smooth out the choppy sine wave steps, rather than snapping to them.
+	local noiseAlpha = math.min(0.05 * scaledDt, 0.5)
+	local movementAlpha = math.min(0.25 * scaledDt, 0.5)
+
+	-- FIX 2: Removed `* scaledDt` from the magnitude (the multiplier after math.cos).
+	-- Magnitude should be constant regardless of frame rate.
+	RandomPitch = Tools.Lerp(
+		RandomPitch,
+		math.cos(AccumulatedTime * 0.5 * math.random(10, 15)) * (math.random(5, 200) / 200),
+		noiseAlpha
+	)
+	RandomRoll = Tools.Lerp(
+		RandomRoll,
+		math.cos(AccumulatedTime * 0.5 * math.random(5, 10)) * (math.random(2, 10) / 200),
+		noiseAlpha
+	)
+
+	local walkSpeed = math.max(Humanoid.WalkSpeed, 0.01)
+	VelTilt = math.clamp(
+		Tools.Lerp(VelTilt, Camera.CFrame:VectorToObjectSpace(velocity / walkSpeed).x * 0.08, 0.1 * scaledDt),
+		-0.35,
+		0.2
+	)
+	MouseDrift = Tools.Lerp(MouseDrift, math.clamp(UserInputService:GetMouseDelta().X, -5, 5), movementAlpha)
+
+	local targetOscX = (math.sin(AccumulatedTime * freq) / 5) * math.min(1, amp / 10)
+	OscX = Tools.Lerp(OscX, targetOscX, movementAlpha)
+
+	if speed > 1 then
+		local targetSway = math.cos(AccumulatedTime * 0.5 * math.floor(freq)) * (freq / 200)
+		SwayYaw = Tools.Lerp(SwayYaw, targetSway, movementAlpha)
+	else
+		SwayYaw = Tools.Lerp(SwayYaw, 0, 0.05 * scaledDt)
+	end
+
+	Camera.CFrame = baseCFrame
+			* CFrame.fromEulerAnglesXYZ(0, 0, math.rad(MouseDrift))
+			* CFrame.fromEulerAnglesXYZ(math.rad(OscX), math.rad(SwayYaw), VelTilt)
+			* CFrame.Angles(0, 0, math.rad(OscX * (speed / 5)))
+			* CFrame.fromEulerAnglesXYZ(math.rad(RandomPitch), math.rad(RandomRoll), math.rad(RandomRoll * 10))
+			* shakeCF
+		+ Humanoid.CameraOffset
+
+	local _, y, _ = Camera.CFrame:ToOrientation()
+	HumanoidRootPart.CFrame = CFrame.new(HumanoidRootPart.Position) * CFrame.Angles(0, y, 0)
 end
 
 function CameraController.Update()
 	UpdateCamera(1 / 60)
 end
 
-CameraController.OnCharacterAdded = function(character: TCharacter.TCharacter)
-	Humanoid = character.Humanoid
-	HumanoidRootPart = character.HumanoidRootPart
+CameraController.OnCharacterAdded = function(character: TCharacter.TCharacter, characterEntity: jecs.Entity)
+	local butler = World:get(characterEntity, Components.Butler)
+	HumanoidRootPart = World:get(characterEntity, Components.HumanoidRootPart) :: BasePart
+	Humanoid = World:get(characterEntity, Components.Humanoid) :: Humanoid
+	if not Humanoid or not HumanoidRootPart or not butler then
+		warn("Humanoid / HumanoidRootPart / Butler are nil")
+		return
+	end
 
-	local firstSpawn = CollectionService:GetTagged("FirstSpawn")[1] :: Attachment
-	if firstSpawn then character.HumanoidRootPart.CFrame = firstSpawn.WorldCFrame end
+	local firstSpawn = CollectionService:GetTagged("SecondSpawn")[1] :: Attachment
+	if firstSpawn then HumanoidRootPart.CFrame = firstSpawn.WorldCFrame end
 
 	Camera.CameraSubject = character.Head
-	Camera.CFrame = character.Head.CFrame
+	Camera.Focus = Camera.CameraSubject.CFrame
+	Camera.CFrame = Camera.Focus
+	Camera.FieldOfView = ECameraFovs.Default
+	Camera.CameraType = Enum.CameraType.Scriptable
 
-	Connection = RunService.PreRender:Connect(UpdateCamera)
-end
-
-CameraController.OnCharacterRemoving = function()
-	if Connection then Connection:Disconnect() end
+	butler:BindToRenderStep("FirstPerson", 0, UpdateCamera)
 end
 
 return Ignis.Register(CameraController)

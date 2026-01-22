@@ -85,15 +85,6 @@ local JumpInfo: TInfo = {
 	TimeElapsed = 0,
 }
 
-local DashInfo: DashInfo = {
-	Direction = 0,
-	Time = 0,
-	InitialSpeed = 0,
-	FinalSpeed = 0,
-	Stun = false,
-	TimeElapsed = 0,
-}
-
 TweensController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 	Humanoid = character.Humanoid
 end

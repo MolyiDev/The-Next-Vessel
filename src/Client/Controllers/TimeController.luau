@@ -1,6 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
 
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
@@ -19,8 +18,6 @@ local startScale = 1
 local tweenDuration = 0
 local tweenElapsed = 0
 local isTweening = false
-local tweenStyle = Enum.EasingStyle.Quad
-local tweenDir = Enum.EasingDirection.Out
 
 local function setTimeScale(value: number)
 	TimeController.TimeScale = value

@@ -18,6 +18,8 @@ local Components = {
 	Speed = jecs.component() :: jecs.Id<number>,
 	Radius = jecs.component() :: jecs.Id<number>,
 	Bone = jecs.component() :: jecs.Id<Bone>,
+	Health = jecs.component() :: jecs.Id<number>,
+	Damage = jecs.component() :: jecs.Id<number>,
 
 	-- Cleanup
 	Cleanup = jecs.component() :: jecs.Id<(entity: jecs.Entity) -> ()>,

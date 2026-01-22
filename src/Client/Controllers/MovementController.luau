@@ -3,6 +3,9 @@ local UserInputService = game:GetService("UserInputService")
 local TimeController = require(script.Parent.TimeController)
 local TweensController = require(script.Parent.TweensController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
+local jecs = require(ReplicatedStorage.Packages.jecs)
+local Components = require(ReplicatedStorage.Shared.ECS.Components)
+local World = require(ReplicatedStorage.Shared.ECS.Worlds.World)
 local Tools = require(ReplicatedStorage.Shared.Utils.Tools)
 local ECameraFovs = require(ReplicatedStorage.Types.Enums.ECameraFovs)
 local EMovementJumps = require(ReplicatedStorage.Types.Enums.Movement.EMovementJumps)
@@ -119,22 +122,17 @@ local function handleRunning(input: InputObject)
 	moveDirection()
 end
 
-local Connections: { RBXScriptConnection } = {}
+MovementController.OnCharacterAdded = function(character: TCharacter.TCharacter, characterEntity: jecs.Entity)
+	local butler = World:get(characterEntity, Components.Butler)
+	local humanoid = World:get(characterEntity, Components.Humanoid)
+	local animator = World:get(characterEntity, Components.Animator)
 
-MovementController.OnCharacterRemoving = function()
-	for _, connection in Connections do
-		connection:Disconnect()
+	if not humanoid or not animator or not butler then
+		warn("Humanoid / HumanoidRootPart / Butler are nil")
+		return
 	end
 
-	table.clear(Connections)
-end
-
-MovementController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 	Character = character
-	local humanoid = Character:FindFirstChild("Humanoid") :: Humanoid
-	if not humanoid then return warn(`Humanoid don't spawned.`) end
-	local animator = humanoid:FindFirstChild("Animator") :: Animator
-	if not animator then return warn(`Animator don't spawned.`) end
 
 	Idle = animator:LoadAnimation(IdleAnim)
 	Idle:Play(0.1, 1, 0.65)
@@ -142,11 +140,11 @@ MovementController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 	Run = animator:LoadAnimation(RunAnim)
 	Walk = animator:LoadAnimation(WalkAnim)
 
-	Connections[#Connections + 1] = humanoid:GetPropertyChangedSignal("MoveDirection"):Connect(moveDirection)
-	Connections[#Connections + 1] = humanoid:GetPropertyChangedSignal("WalkSpeed"):Connect(moveDirection)
-	Connections[#Connections + 1] = UserInputService.InputBegan:Connect(handleRunning)
-	Connections[#Connections + 1] = UserInputService.InputEnded:Connect(handleRunning)
-	Connections[#Connections + 1] = TimeController.TimeScaleChanged:Connect(updateSpeeds) :: any
+	butler:Connect(humanoid:GetPropertyChangedSignal("MoveDirection"), moveDirection)
+	butler:Connect(humanoid:GetPropertyChangedSignal("WalkSpeed"), moveDirection)
+	butler:Connect(UserInputService.InputBegan, handleRunning)
+	butler:Connect(UserInputService.InputEnded, handleRunning)
+	butler:Connect(TimeController.TimeScaleChanged :: any, updateSpeeds)
 
 	humanoid.WalkSpeed = EMovementSpeeds.Default
 	humanoid.JumpHeight = EMovementJumps.Default

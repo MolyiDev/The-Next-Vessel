@@ -1,5 +1,8 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
+local jecs = require(ReplicatedStorage.Packages.jecs)
+local Components = require(ReplicatedStorage.Shared.ECS.Components)
+local World = require(ReplicatedStorage.Shared.ECS.Worlds.World)
 local TCharacter = require(ReplicatedStorage.Types.TCharacter)
 
 local function disableTransparency(part: Instance)
@@ -18,24 +21,23 @@ local function disableTransparency(part: Instance)
 	end
 end
 
-local childAddedConnection: RBXScriptConnection?
-
 local CharacterController = {}
 
-function CharacterController.OnCharacterAdded(character: TCharacter.TCharacter)
-	local humanoid = character:WaitForChild("Humanoid") :: Humanoid
-	humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
-
-	if childAddedConnection then
-		childAddedConnection:Disconnect()
-		childAddedConnection = nil
+function CharacterController.OnCharacterAdded(character: TCharacter.TCharacter, characterEntity: jecs.Entity)
+	local humanoid = World:get(characterEntity, Components.Humanoid)
+	local butler = World:get(characterEntity, Components.Butler)
+	if not humanoid or not butler then
+		warn("Humanoid / Butler are nil")
+		return
 	end
+
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
 
 	for _, child in character:getChildren() do
 		disableTransparency(child)
 	end
 
-	childAddedConnection = character.ChildAdded:Connect(function(part)
+	butler:Connect(character.ChildAdded, function(part)
 		disableTransparency(part)
 	end)
 end

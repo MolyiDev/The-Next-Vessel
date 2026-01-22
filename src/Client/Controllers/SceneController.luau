@@ -3,18 +3,24 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
+local BossController = require(script.Parent.BossController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local EScenes = require(ReplicatedStorage.Types.Enums.EScenes)
+local EUpgrades = require(ReplicatedStorage.Types.Enums.EUpgrades)
 local CameraController = require(script.Parent.CameraController)
 local HealthController = require(script.Parent.HealthController)
+local ProjectileController = require(script.Parent.ProjectileController)
+local TimeController = require(script.Parent.TimeController)
 local TweensController = require(script.Parent.TweensController)
+local UpgradesController = require(script.Parent.UpgradesController)
 local TCharacter = require(ReplicatedStorage.Types.TCharacter)
 local TScene = require(ReplicatedStorage.Types.TScene)
 
 local SCENE_MODULES: { [number]: TScene.TScene } = table.freeze({
 	[EScenes.First] = require(script.Parent.Parent.Scenes.Scene_First),
 	[EScenes.Second] = require(script.Parent.Parent.Scenes.Scene_Second),
+	[EScenes.Third] = require(script.Parent.Parent.Scenes.Scene_Third),
 })
 
 local Player = Players.LocalPlayer
@@ -26,7 +32,14 @@ local function startCharacter(character: TCharacter.TCharacter)
 	character.Humanoid.AutoRotate = true
 	CameraController.HideMouse()
 	CameraController.LockCamera()
-	TweensController.SetImmobile(false, 0.01)
+	TweensController.SetImmobile(false)
+end
+
+local function resetGlobalState()
+	TimeController.Resume(0)
+	ProjectileController.Cleanup()
+	BossController.Reset()
+	TweensController.SetImmobile(false)
 end
 
 local function getSceneModule(sceneId: number): TScene.TScene
@@ -41,6 +54,8 @@ SceneController.CurrentScene = EScenes.Starting
 function SceneController.LoadScene(sceneId: number)
 	if ActiveSceneModule and ActiveSceneModule.Stop then ActiveSceneModule.Stop() end
 
+	resetGlobalState()
+
 	local oldScene = SceneController.CurrentScene
 	SceneController.CurrentScene = sceneId
 	ActiveSceneModule = getSceneModule(sceneId)
@@ -48,9 +63,7 @@ function SceneController.LoadScene(sceneId: number)
 	SceneController.OnSceneChanged:Fire(oldScene, sceneId)
 
 	if not ActiveSceneModule or not ActiveSceneModule.Start then return end
-	local scenePromise = ActiveSceneModule.Start()
-	if not scenePromise then return end
-	scenePromise:andThen(function(nextSceneId)
+	ActiveSceneModule.Start():andThen(function(nextSceneId: number)
 		if nextSceneId and type(nextSceneId) == "number" then SceneController.LoadScene(nextSceneId) end
 	end)
 end
@@ -60,6 +73,7 @@ function SceneController.IsGameStarted(): boolean
 end
 
 function SceneController.Restart()
+	resetGlobalState()
 	if ActiveSceneModule and ActiveSceneModule.Restart then ActiveSceneModule.Restart() end
 end
 
@@ -77,6 +91,7 @@ SceneController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 	end
 
 	-- The game has not started.
+	print("scene")
 	character.Humanoid.AutoRotate = false
 	TweensController.SetImmobile(true, 0.01)
 
@@ -91,11 +106,17 @@ SceneController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 		startCharacter(character)
 		SceneController.OnGameStarted:Fire()
 
-		SceneController.LoadScene(EScenes.First)
+		-- Test
+		UpgradesController.AddUpgrade(EUpgrades.Dash)
+		UpgradesController.AddUpgrade(EUpgrades.Parry)
+		SceneController.LoadScene(EScenes.Third)
+
+		-- Normal
+		-- SceneController.LoadScene(EScenes.First)
 	end)
 end
 
-HealthController.Died:Connect(function()
+HealthController.OnDead:Connect(function()
 	if SceneController.CurrentScene <= 0 then return end
 
 	if ActiveSceneModule and ActiveSceneModule.CharacterDied then
@@ -106,12 +127,12 @@ HealthController.Died:Connect(function()
 	if ActiveSceneModule and ActiveSceneModule.Restart then ActiveSceneModule.Restart() end
 end)
 
-HealthController.Revived:Connect(function()
+HealthController.OnRevived:Connect(function()
 	local character = Player.Character :: TCharacter.TCharacter
 	if not character then return end
 	local camera = Workspace.CurrentCamera
 
-	if SceneController.CurrentScene < EScenes.Third then
+	if SceneController.CurrentScene < EScenes.Second then
 		local firstSpawn = CollectionService:GetTagged("FirstSpawn")[1] :: Attachment
 		if firstSpawn then character.HumanoidRootPart.CFrame = firstSpawn.WorldCFrame end
 	else
@@ -120,7 +141,9 @@ HealthController.Revived:Connect(function()
 	end
 
 	camera.CameraSubject = character.Head
-	camera.CFrame = character.Head.CFrame
+	camera.Focus = camera.CameraSubject.CFrame
+	camera.CFrame = camera.Focus
+
 	CameraController.UpdateRotation()
 
 	startCharacter(character)
