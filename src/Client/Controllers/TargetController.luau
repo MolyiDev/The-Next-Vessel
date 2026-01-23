@@ -12,9 +12,9 @@ local Tools = require(ReplicatedStorage.Shared.Utils.Tools)
 
 local SELECTION_THRESHOLD_PX = 80 -- How close (in pixels) you must click to the enemy
 local MAX_SELECTION_DIST = 500 -- Max distance in studs to select
-local RETICLE_SIZE_STUDS = 6 -- How "wide" the arrow circle is in world studs
+local RETICLE_SIZE_STUDS = 7 -- How "wide" the arrow circle is in world studs
 local MIN_SIZE_PX = 10 -- Minimum size in pixels (so it doesn't vanish completely)
-local MAX_SIZE_PX = 150 -- Maximum size in pixels (so it doesn't cover entire screen up close)
+local MAX_SIZE_PX = 100 -- Maximum size in pixels (so it doesn't cover entire screen up close)
 local ARROW_TARGET = "rbxassetid://129623063194632"
 local HOVER_UPDATE_RATE = 0.05
 
@@ -65,6 +65,7 @@ local function CreateReticle(name: string, color: Color3): Reticle
 		img.ImageColor3 = color
 		img.BackgroundTransparency = 1
 		img.Size = UDim2.fromScale(0.4, 0.4)
+		img.ImageTransparency = 0.25
 		img.Position = positions[i]
 		img.AnchorPoint = anchorPoints[i]
 		img.Rotation = rotations[i]

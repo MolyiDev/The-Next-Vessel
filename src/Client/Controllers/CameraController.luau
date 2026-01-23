@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local UserGameSettings = UserSettings():GetService("UserGameSettings")
+local DashController = require(script.Parent.DashController)
 local TimeController = require(script.Parent.TimeController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local jecs = require(ReplicatedStorage.Packages.jecs)
@@ -11,6 +12,7 @@ local Components = require(ReplicatedStorage.Shared.ECS.Components)
 local World = require(ReplicatedStorage.Shared.ECS.Worlds.World)
 local Tools = require(ReplicatedStorage.Shared.Utils.Tools)
 local ECameraFovs = require(ReplicatedStorage.Types.Enums.ECameraFovs)
+local EDirections = require(ReplicatedStorage.Types.Enums.EDirections)
 local TCharacter = require(ReplicatedStorage.Types.TCharacter)
 
 type ShakeInstance = {
@@ -54,24 +56,7 @@ local Humanoid: Humanoid
 local HumanoidRootPart: BasePart
 
 local CameraController = {}
-CameraController.MouseActive = true
 CameraController.CameraLocked = false
-
-function CameraController.HideMouse()
-	UserInputService.MouseIconEnabled = false
-end
-
-function CameraController.ShowMouse()
-	UserInputService.MouseIconEnabled = true
-end
-
-function CameraController.ToggleMouse()
-	if CameraController.MouseActive then
-		CameraController.HideMouse()
-	else
-		CameraController.ShowMouse()
-	end
-end
 
 function CameraController.LockCamera()
 	CameraController.CameraLocked = true
@@ -193,6 +178,7 @@ local function UpdateCamera(rawDt: number)
 
 	local velocity = HumanoidRootPart.AssemblyLinearVelocity
 	local speed = Vector3.new(velocity.x, 0, velocity.z).Magnitude
+	print(velocity, speed)
 
 	local freq = 0
 	local amp = 0
@@ -201,6 +187,11 @@ local function UpdateCamera(rawDt: number)
 		freq = Config.Run.Freq
 		amp = Config.Run.Amp
 		speed = Config.Run.Threshold
+		velocity = Vector3.new(
+			math.min(velocity.x, Config.Run.Threshold),
+			math.min(velocity.y, Config.Run.Threshold),
+			math.min(velocity.z, Config.Run.Threshold)
+		)
 	elseif speed > Config.Walk.Threshold then
 		freq = Config.Walk.Freq
 		amp = Config.Walk.Amp
@@ -231,11 +222,14 @@ local function UpdateCamera(rawDt: number)
 	)
 
 	local walkSpeed = math.max(Humanoid.WalkSpeed, 0.01)
-	VelTilt = math.clamp(
-		Tools.Lerp(VelTilt, -Camera.CFrame:VectorToObjectSpace(velocity / walkSpeed).x * 0.08, 0.1 * scaledDt),
-		-0.35,
-		0.2
-	)
+
+	VelTilt = if DashController.IsDashing() and DashController.Direction == EDirections.Front
+		then 0
+		else math.clamp(
+			Tools.Lerp(VelTilt, -Camera.CFrame:VectorToObjectSpace(velocity / walkSpeed).x * 0.08, 0.1 * scaledDt),
+			-0.35,
+			0.2
+		)
 	MouseDrift = Tools.Lerp(MouseDrift, math.clamp(UserInputService:GetMouseDelta().X, -5, 5), movementAlpha)
 
 	local targetOscX = (math.sin(AccumulatedTime * freq) / 5) * math.min(1, amp / 10)

@@ -1,8 +1,8 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
-local CameraController = require(script.Parent.CameraController)
 local HealthController = require(script.Parent.HealthController)
+local MouseController = require(script.Parent.MouseController)
 local Fluid = require(ReplicatedStorage.Shared.Utils.Fluid)
 local UpgradeUI = require(StarterPlayer.StarterPlayerScripts.Client.UI.UpgradeUI)
 local ERarity = require(ReplicatedStorage.Types.Enums.ERarity)
@@ -103,7 +103,7 @@ Fluid.mount(function()
 	UI = UpgradeUI({
 		SelectedCard = function(upgradeId)
 			if OnUpgradeSelected then OnUpgradeSelected(upgradeId) end
-			CameraController.HideMouse()
+			MouseController.HideMouse()
 		end,
 	})
 	return UI.UI
@@ -176,7 +176,7 @@ end
 
 function UpgradesController.Show(upgrades: { number }?, fill: boolean?): Promise.Promise
 	if CurrentPromise then CurrentPromise:cancel() end
-	CameraController.ShowMouse()
+	MouseController.ShowMouse()
 
 	local upgradesList: { number }
 	if fill then

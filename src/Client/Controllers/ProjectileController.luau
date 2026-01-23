@@ -41,6 +41,10 @@ type SpellBreak = {
 
 local PARRY_STRENGTH = 4
 local MAX_PROJECTILES = 80
+local SENDER_PLAYER_SPHERE_COLOR = Color3.fromRGB(1, 122, 173)
+local SENDER_PLAYER_EFFECT_COLOR = ColorSequence.new(Color3.fromRGB(12, 255, 239))
+local SENDER_ENEMY_SPHERE_COLOR = Color3.fromRGB(173, 0, 66)
+local SENDER_ENEMY_EFFECT_COLOR = ColorSequence.new(Color3.new(1, 0, 0))
 
 local Player = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
@@ -52,6 +56,10 @@ local RayParams = RaycastParams.new()
 RayParams.FilterType = Enum.RaycastFilterType.Exclude
 
 local ProjectileController = {}
+ProjectileController.ESender = {
+	Player = 0,
+	Enemy = 1,
+}
 ProjectileController.ProjectileCount = 0
 ProjectileController.ProjectilesSpawnLow = CollectionService:GetTagged("ProjectilesSpawnLow")[1] :: BasePart
 ProjectileController.ProjectilesSpawnHigh = CollectionService:GetTagged("ProjectilesSpawnHigh")[1] :: BasePart
@@ -65,6 +73,7 @@ function ProjectileController.AddProjectile(
 	targetPos: Vector3,
 	speed: number,
 	radius: number,
+	sender: number,
 	damage: number?,
 	health: number?
 )
@@ -74,9 +83,25 @@ function ProjectileController.AddProjectile(
 	local projectileEntity = WorldRef:EntityRef(model)
 	local root = model.Sphere.Root
 	local initialCF = CFrame.new(initialPos, targetPos)
+
+	if sender == ProjectileController.ESender.Player then
+		model.Sphere.Color = SENDER_PLAYER_SPHERE_COLOR
+		root.Glow.Color = SENDER_PLAYER_EFFECT_COLOR
+		root.Sparks.Color = SENDER_PLAYER_EFFECT_COLOR
+		root.Trail.Color = SENDER_PLAYER_EFFECT_COLOR
+	else
+		model.Sphere.Color = SENDER_ENEMY_SPHERE_COLOR
+		root.Glow.Color = SENDER_ENEMY_EFFECT_COLOR
+		root.Sparks.Color = SENDER_ENEMY_EFFECT_COLOR
+		root.Trail.Color = SENDER_ENEMY_EFFECT_COLOR
+	end
+
 	root.CFrame = initialCF
 
-	model.Sphere.Root.Trail.Enabled = true
+	task.defer(function()
+		model.Sphere.Root.Trail.Enabled = true
+	end)
+
 	ProjectileController.ProjectileCount += 1
 
 	jecs.bulk_insert(World, projectileEntity, {
@@ -107,6 +132,7 @@ function ProjectileController.AddProjectileMissile(
 	target: BasePart,
 	speed: number,
 	radius: number,
+	sender: number,
 	damage: number?,
 	health: number?
 )
@@ -116,9 +142,25 @@ function ProjectileController.AddProjectileMissile(
 	local projectileEntity = WorldRef:EntityRef(model)
 	local root = model.Sphere.Root
 	local initialCF = CFrame.new(initialPos, direction)
+
+	if sender == ProjectileController.ESender.Player then
+		model.Sphere.Color = SENDER_PLAYER_SPHERE_COLOR
+		root.Glow.Color = SENDER_PLAYER_EFFECT_COLOR
+		root.Sparks.Color = SENDER_PLAYER_EFFECT_COLOR
+		root.Trail.Color = SENDER_PLAYER_EFFECT_COLOR
+	else
+		model.Sphere.Color = SENDER_ENEMY_SPHERE_COLOR
+		root.Glow.Color = SENDER_ENEMY_EFFECT_COLOR
+		root.Sparks.Color = SENDER_ENEMY_EFFECT_COLOR
+		root.Trail.Color = SENDER_ENEMY_EFFECT_COLOR
+	end
+
 	root.CFrame = initialCF
 
-	model.Sphere.Root.Trail.Enabled = true
+	task.defer(function()
+		model.Sphere.Root.Trail.Enabled = true
+	end)
+
 	ProjectileController.ProjectileCount += 1
 
 	jecs.bulk_insert(World, projectileEntity, {
@@ -148,8 +190,11 @@ end
 local function destroy(projectileEntity: jecs.Entity, model: Projectile)
 	model.Sphere.Root.Trail.Enabled = false
 	WorldRef:Nuke(model, projectileEntity)
-	ProjectilePool:Return(model)
 	ProjectileController.ProjectileCount -= 1
+
+	task.defer(function()
+		ProjectilePool:Return(model)
+	end)
 end
 
 function ProjectileController.RemoveProjectile(projectileEntity: jecs.Entity)

@@ -32,6 +32,8 @@ function CharacterController.OnCharacterAdded(character: TCharacter.TCharacter, 
 	end
 
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Climbing, false)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
+	humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
 
 	for _, child in character:getChildren() do
 		disableTransparency(child)

@@ -10,6 +10,7 @@ local EScenes = require(ReplicatedStorage.Types.Enums.EScenes)
 local EUpgrades = require(ReplicatedStorage.Types.Enums.EUpgrades)
 local CameraController = require(script.Parent.CameraController)
 local HealthController = require(script.Parent.HealthController)
+local MouseController = require(script.Parent.MouseController)
 local ProjectileController = require(script.Parent.ProjectileController)
 local TimeController = require(script.Parent.TimeController)
 local TweensController = require(script.Parent.TweensController)
@@ -30,7 +31,7 @@ local InputBeganConnection: RBXScriptConnection?
 
 local function startCharacter(character: TCharacter.TCharacter)
 	character.Humanoid.AutoRotate = true
-	CameraController.HideMouse()
+	MouseController.HideMouse()
 	CameraController.LockCamera()
 	TweensController.SetImmobile(false)
 end

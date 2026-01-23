@@ -23,6 +23,7 @@ function BossSpawnController.ProjectilesAtSceneStart(damage: number, speedMultip
 		character.PrimaryPart,
 		120 * speedMultiplier,
 		2.5,
+		ProjectileController.ESender.Enemy,
 		damage
 	)
 
@@ -33,6 +34,7 @@ function BossSpawnController.ProjectilesAtSceneStart(damage: number, speedMultip
 		character.PrimaryPart,
 		120 * speedMultiplier,
 		2.5,
+		ProjectileController.ESender.Enemy,
 		damage
 	)
 
@@ -43,6 +45,7 @@ function BossSpawnController.ProjectilesAtSceneStart(damage: number, speedMultip
 		character.PrimaryPart,
 		120 * speedMultiplier,
 		2.5,
+		ProjectileController.ESender.Enemy,
 		damage
 	)
 
@@ -53,6 +56,7 @@ function BossSpawnController.ProjectilesAtSceneStart(damage: number, speedMultip
 		character.PrimaryPart,
 		120 * speedMultiplier,
 		2.5,
+		ProjectileController.ESender.Enemy,
 		damage
 	)
 
@@ -63,6 +67,7 @@ function BossSpawnController.ProjectilesAtSceneStart(damage: number, speedMultip
 		character.PrimaryPart,
 		120 * speedMultiplier,
 		2.5,
+		ProjectileController.ESender.Enemy,
 		damage
 	)
 end

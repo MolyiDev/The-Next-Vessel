@@ -118,6 +118,7 @@ function Scene_Third.Start()
 								SpawnLowPos + Direction,
 								80,
 								2.5,
+								ProjectileController.ESender.Enemy,
 								5,
 								math.random(0, 6)
 							)

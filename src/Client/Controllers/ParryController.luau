@@ -1,4 +1,3 @@
-local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local CameraController = require(script.Parent.CameraController)
@@ -14,8 +13,6 @@ local PARRY_COOLDOWN = 0.2
 
 local BASE_MULTIPLIER = 1.1
 local MAX_MULTIPLIER = 2.5
-
-local Targets = CollectionService:GetTagged("Target")
 
 local ParryController = {}
 ParryController.IsCharging = false

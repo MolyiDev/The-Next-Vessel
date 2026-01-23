@@ -40,6 +40,7 @@ local DashAnimations: { [Vector3]: { AnimationTrack } } = {}
 
 local DashController = {}
 DashController.LastDashTime = 0
+DashController.Direction = Vector3.zero
 
 local CurrentAnimations: { AnimationTrack } = {}
 
@@ -48,7 +49,6 @@ local Character: TCharacter.TCharacter
 local Connection: RBXScriptConnection?
 
 local TimeElapsed = 0
-local Direction = Vector3.zero
 
 local function stopDash()
 	if BodyVelocity then
@@ -89,21 +89,21 @@ local function getMoveDirection(): Vector3
 	local look = rootCF.LookVector
 	local right = rootCF.RightVector
 
-	if Direction == EDirections.Front then
+	if DashController.Direction == EDirections.Front then
 		return look
-	elseif Direction == EDirections.FrontLeft then
+	elseif DashController.Direction == EDirections.FrontLeft then
 		return look - right
-	elseif Direction == EDirections.FrontRight then
+	elseif DashController.Direction == EDirections.FrontRight then
 		return look + right
-	elseif Direction == EDirections.Back then
+	elseif DashController.Direction == EDirections.Back then
 		return -look
-	elseif Direction == EDirections.BackLeft then
+	elseif DashController.Direction == EDirections.BackLeft then
 		return -look - right
-	elseif Direction == EDirections.BackRight then
+	elseif DashController.Direction == EDirections.BackRight then
 		return -look + right
-	elseif Direction == EDirections.Left then
+	elseif DashController.Direction == EDirections.Left then
 		return -right
-	elseif Direction == EDirections.Right then
+	elseif DashController.Direction == EDirections.Right then
 		return right
 	end
 
@@ -180,12 +180,12 @@ function DashController.Dash()
 	BodyVelocity.Parent = Character.HumanoidRootPart
 
 	TimeElapsed = 0
-	Direction = Tools.WorldMovingDirection(
+	DashController.Direction = Tools.WorldMovingDirection(
 		Character.HumanoidRootPart.CFrame:VectorToObjectSpace(Character.Humanoid.MoveDirection)
 	)
-	if Direction == Vector3.zero then Direction = EDirections.Back end
+	if DashController.Direction == Vector3.zero then DashController.Direction = EDirections.Back end
 
-	local animations = DashAnimations[Direction]
+	local animations = DashAnimations[DashController.Direction]
 	if not animations then return end
 
 	for _, anim in animations do
