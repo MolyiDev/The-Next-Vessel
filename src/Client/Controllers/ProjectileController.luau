@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local BossController = require(script.Parent.BossController)
 local DashController = require(script.Parent.DashController)
+local EnemiesController = require(script.Parent.EnemiesController)
 local FloatingNumbersController = require(script.Parent.FloatingNumbersController)
 local HealthController = require(script.Parent.HealthController)
 local KnockbackController = require(script.Parent.KnockbackController)
@@ -50,10 +51,12 @@ local SENDER_ENEMY_EFFECT_COLOR = ColorSequence.new(Color3.new(1, 0, 0))
 
 local Player = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
+
 local ProjectileModel = ReplicatedStorage:WaitForChild("Models"):WaitForChild("Projectile") :: Projectile
 local ProjectileBreakEffect = ReplicatedStorage:WaitForChild("Effects"):WaitForChild("SpellBreak") :: SpellBreak
 local ProjectilesZone = CollectionService:GetTagged("ProjectilesZone")[1] :: BasePart
 local ProjectilePool = ObjectPooler.new(ProjectileModel, 80, 1, ObjectPooler.ReturnBoneModel, Workspace.Projectiles)
+
 local RayParams = RaycastParams.new()
 RayParams.FilterType = Enum.RaycastFilterType.Exclude
 
@@ -80,7 +83,9 @@ local function spawnProjectileInternal(
 	damage: number,
 	health: number
 )
-	if ProjectileController.ProjectileCount >= MAX_PROJECTILES then return end
+	if sender ~= ProjectileController.ESender.Player and ProjectileController.ProjectileCount >= MAX_PROJECTILES then
+		return
+	end
 
 	local model = ProjectilePool:Get() :: Projectile
 	local projectileEntity = WorldRef:EntityRef(model)
@@ -100,7 +105,7 @@ local function spawnProjectileInternal(
 
 	local values: { any } = {
 		initialCF,
-		(direction - initialPos).Unit,
+		direction,
 		speed,
 		radius,
 		model,
@@ -166,7 +171,8 @@ function ProjectileController.AddProjectileMissile(
 end
 
 local function destroy(projectileEntity: jecs.Entity, model: Projectile)
-	model.Sphere.Root.Trail.Enabled = false
+	if model then model.Sphere.Root.Trail.Enabled = false end
+
 	WorldRef:Nuke(model, projectileEntity)
 	ProjectileController.ProjectileCount -= 1
 
@@ -209,7 +215,12 @@ end
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp then return end
 	if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+
+	local character = Player.Character
+	if not character then return end
+
 	if not DashController.UseAmmo() then return end
+
 	local targetEnt, targetPos = TargetController.GetTarget()
 	local targetInstance = nil
 
@@ -220,17 +231,21 @@ UserInputService.InputBegan:Connect(function(input, gp)
 			or World:get(targetEnt, Components.Bone)
 	end
 
-	if not targetInstance then return end
-	local char = Player.Character
-	if not char then return end
+	local startPos = character.PrimaryPart.Position + Vector3.new(0, 2, 0)
 
-	local startPos = char.PrimaryPart.Position + Vector3.new(0, 2, 0)
+	if not targetInstance then
+		local dir = Workspace.CurrentCamera.CFrame.LookVector
+		ProjectileController.AddProjectile(startPos, dir, 90, 2.5, ProjectileController.ESender.Player, 20, 1)
+
+		return
+	end
+
 	local dir = (targetPos - startPos).Unit
 
 	ProjectileController.AddProjectileMissile(
 		startPos,
 		dir,
-		targetInstance,
+		targetInstance :: any,
 		90, -- Speed
 		2.5, -- Radius
 		ProjectileController.ESender.Player,
@@ -282,6 +297,42 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 		local displacement = direction * speed * dt
 		local newPos = currentPos + displacement
 		local segLenSq = displacement.Magnitude * displacement.Magnitude
+
+		local hitEnemy = false
+		if not World:has(entity, Tags.SafeEnemy) then -- Only player projectiles hit enemies
+			EnemiesController.SpatialHash:QuerySphereAsPoints(
+				newPos.X,
+				newPos.Y,
+				newPos.Z,
+				radius * 2,
+				function(enemyEntity)
+					if hitEnemy then return end -- Only hit one enemy per frame per projectile
+
+					local enemyCF = World:get(enemyEntity, Components.CFrame)
+					local enemyRadius = World:get(enemyEntity, Components.Radius) or 2
+					if not enemyCF then return end
+
+					-- Verify exact distance since Hash is coarse/broadphase
+					local distSq = (enemyCF.Position - newPos).Magnitude ^ 2
+					local combinedRadius = radius + enemyRadius
+
+					if distSq <= combinedRadius * combinedRadius then
+						hitEnemy = true
+						local dmg = World:get(entity, Components.Damage) or 0
+
+						EnemiesController.HitEnemy(enemyEntity, dmg)
+						FloatingNumbersController.Add(
+							enemyCF.Position,
+							dmg,
+							FloatingNumbersController.ENumberType.DamageEnemy
+						)
+
+						-- Visual break
+						ProjectileController.BreakProjectile(entity)
+					end
+				end
+			)
+		end
 
 		-- Boss parry / damage
 		if (World:has(entity, Tags.Parried) or World:has(entity, Tags.SafePlayer)) and bossRoot then
