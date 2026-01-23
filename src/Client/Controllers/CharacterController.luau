@@ -1,29 +1,14 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundsController = require(script.Parent.SoundsController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local jecs = require(ReplicatedStorage.Packages.jecs)
 local Components = require(ReplicatedStorage.Shared.ECS.Components)
 local World = require(ReplicatedStorage.Shared.ECS.Worlds.World)
-local TCharacter = require(ReplicatedStorage.Types.TCharacter)
-
-local function disableTransparency(part: Instance)
-	if not part:IsA("BasePart") then return end
-
-	if part.Name == "Head" then
-		part:GetPropertyChangedSignal("LocalTransparencyModifier"):Connect(function()
-			part.LocalTransparencyModifier = 1
-		end)
-		part.LocalTransparencyModifier = 1
-	else
-		part:GetPropertyChangedSignal("LocalTransparencyModifier"):Connect(function()
-			part.LocalTransparencyModifier = 0
-		end)
-		part.LocalTransparencyModifier = 0
-	end
-end
+local ESounds = require(ReplicatedStorage.Types.Enums.ESounds)
 
 local CharacterController = {}
 
-function CharacterController.OnCharacterAdded(character: TCharacter.TCharacter, characterEntity: jecs.Entity)
+function CharacterController.OnCharacterAdded(_, characterEntity: jecs.Entity)
 	local humanoid = World:get(characterEntity, Components.Humanoid)
 	local butler = World:get(characterEntity, Components.Butler)
 	if not humanoid or not butler then
@@ -35,12 +20,9 @@ function CharacterController.OnCharacterAdded(character: TCharacter.TCharacter, 
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Dead, false)
 	humanoid:SetStateEnabled(Enum.HumanoidStateType.Seated, false)
 
-	for _, child in character:getChildren() do
-		disableTransparency(child)
-	end
-
-	butler:Connect(character.ChildAdded, function(part)
-		disableTransparency(part)
+	butler:Connect(humanoid.StateChanged, function(old, new)
+		if new ~= Enum.HumanoidStateType.Jumping then return end
+		SoundsController.PlayCharacter(ESounds.PlayerJump)
 	end)
 end
 

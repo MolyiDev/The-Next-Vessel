@@ -1,5 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local SoundsController = require(script.Parent.SoundsController)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local ESounds = require(ReplicatedStorage.Types.Enums.ESounds)
 
 local Health = 100
 local MaxHealth = 100
@@ -28,15 +30,12 @@ end
 function HealthController.SetHealth(value: number)
 	local newHealth = math.clamp(value, 0, MaxHealth)
 
-	print("setHealth", 1)
 	if newHealth == Health then return end
 
 	local oldHealth = Health
 	local diff = newHealth - oldHealth
 
 	Health = newHealth
-
-	print("setHealth", 2, oldHealth, newHealth, diff)
 
 	if newHealth <= 0 then
 		if not IsDead then
@@ -48,6 +47,7 @@ function HealthController.SetHealth(value: number)
 	if diff < 0 then
 		local damage = math.abs(diff)
 		HealthController.OnDamaged:Fire(oldHealth, newHealth, damage)
+		SoundsController.PlayCharacter(ESounds.PlayerDamaged)
 	elseif diff > 0 then
 		local healed = diff
 		HealthController.OnHealed:Fire(oldHealth, newHealth, healed)

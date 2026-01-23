@@ -23,6 +23,9 @@ type SpiritBreak = {
 } & Attachment
 
 local TURN_STRENGTH = 4
+local SEPARATION_RADIUS = 6
+local SEPARATION_FORCE = 1.5
+local MAX_ENEMIES = 40
 
 local Player = Players.LocalPlayer
 local SpiritModel = ReplicatedStorage:WaitForChild("Effects"):WaitForChild("Spirit") :: Spirit
@@ -30,6 +33,7 @@ local SpiritBreakEffect = ReplicatedStorage:WaitForChild("Effects"):WaitForChild
 local SpiritPool = ObjectPooler.new(SpiritModel, 200, 50, ObjectPooler.ReturnCF, Workspace.Spirits)
 
 local EnemiesController = {}
+EnemiesController.EnemiesCount = 0
 
 function EnemiesController.SpawnEnemy(
 	initialPos: Vector3,
@@ -39,8 +43,11 @@ function EnemiesController.SpawnEnemy(
 	damage: number?,
 	health: number?
 )
+	if EnemiesController.EnemiesCount >= MAX_ENEMIES then return end
+
 	local model = SpiritPool:Get() :: Spirit
 	local enemyEntity = WorldRef:EntityRef(model)
+	EnemiesController.EnemiesCount += 1
 
 	jecs.bulk_insert(World, enemyEntity, {
 		Components.CFrame,
@@ -65,6 +72,7 @@ end
 local function destroy(enemyEntity: jecs.Entity, model: Spirit)
 	WorldRef:Nuke(model, enemyEntity)
 	SpiritPool:Return(model)
+	EnemiesController.EnemiesCount -= 1
 end
 
 function EnemiesController.RemoveEnemy(enemyEntity: jecs.Entity)
@@ -93,8 +101,8 @@ function EnemiesController.BreakEnemy(enemyEntity: jecs.Entity)
 end
 
 function EnemiesController.Cleanup()
-	for entity in World:query(Tags.Enemy) do
-		EnemiesController.RemoveEnemy(entity)
+	for entity, attachment in World:query(Components.Attachment, Tags.Enemy) do
+		destroy(entity, attachment)
 	end
 end
 
@@ -121,7 +129,6 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 	local character = Player.Character
 	local rootPart = if character then character.PrimaryPart else nil
 	local characterPos = if rootPart then rootPart.Position else nil
-	-- Get velocity for prediction
 	local characterVel = if rootPart then rootPart.AssemblyLinearVelocity else Vector3.zero
 
 	-- Logic Update

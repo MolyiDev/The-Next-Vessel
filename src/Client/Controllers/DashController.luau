@@ -41,6 +41,7 @@ local DashAnimations: { [Vector3]: { AnimationTrack } } = {}
 local DashController = {}
 DashController.LastDashTime = 0
 DashController.Direction = Vector3.zero
+DashController.StoredProjectiles = 0
 
 local CurrentAnimations: { AnimationTrack } = {}
 
@@ -129,6 +130,20 @@ local function update(rawDt: number)
 	local moveDirection = getMoveDirection().Unit
 
 	if BodyVelocity then BodyVelocity.Velocity = moveDirection * speed * TimeController.TimeScale end
+end
+
+function DashController.AddAmmo()
+	DashController.StoredProjectiles += 1
+	-- TODO: Visual/Sound feedback for absorbing
+end
+
+function DashController.UseAmmo(): boolean
+	if DashController.StoredProjectiles > 0 then
+		DashController.StoredProjectiles -= 1
+		return true
+	end
+
+	return false
 end
 
 function DashController.IsDashing()

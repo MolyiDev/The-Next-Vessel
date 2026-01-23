@@ -56,7 +56,7 @@ function ParryController.SuccessfulParry(wasBreaked: boolean?)
 		end)
 	end
 
-	CameraController.Shake(2, 1, 0.8, Vector3.new(0.1, 0.1, 0.1), Vector3.new(2, 1, 2), 0.2)
+	CameraController.Shake(2, 1, 0.8, Vector3.new(0.2, 0.2, 0.2), Vector3.zero, 0.2)
 end
 
 UserInputService.InputBegan:Connect(function(input, gp)

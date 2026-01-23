@@ -41,7 +41,6 @@ end
 function Scene_First.Start()
 	HealthController.Revive()
 	HotbarController.Appear()
-	BossLifebarController.Appear()
 
 	Scene_First.IsActive = true
 	Scene_First.ShouldRestart = true

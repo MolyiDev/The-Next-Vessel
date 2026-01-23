@@ -13,6 +13,8 @@ local UI: HotbarUI.HotbarUIReturn
 
 Fluid.mount(function()
 	UI = HotbarUI()
+	UI.SetMaxHealth(HealthController.GetMaxHealth())
+	UI.SetCurrentHealth(HealthController.GetHealth())
 	return UI.UI
 end, PlayerGui)
 
@@ -25,8 +27,6 @@ function HotbarController.Disappear()
 end
 
 HealthController.OnDamaged:Connect(function(_, new)
-	-- TODO: Make a sound.
-	print("damage", new)
 	UI.SetCurrentHealth(new)
 end)
 

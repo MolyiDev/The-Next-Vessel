@@ -10,14 +10,18 @@ local AnimatorConnection: RBXScriptConnection?
 local EffectsGroup = SoundService:WaitForChild("Effects") :: SoundGroup
 local FootstepsSounds = ReplicatedStorage:WaitForChild("Sounds"):WaitForChild("Footsteps") :: { [string]: Sound }
 local AnimationNames = {
-	Run = true,
-	Walk = true,
+	RunFront = true,
+	WalkFront = true,
+	WalkBack = true,
+	WalkLeft = true,
+	WalkRight = true,
 }
 
 local MIN_TREMOLO = 0.65
 local MAX_TREMOLO = 0.95
 local MIN_SPEED = 0.94
 local MAX_SPEED = 1.06
+local FOOTSTEP_DEBOUNCE = 0.1
 
 local FootstepsController = {}
 
@@ -32,16 +36,24 @@ function FootstepsController.OnCharacterAdded(_, characterEntity: jecs.Entity)
 		return
 	end
 
+	local lastFootstep = 0
+
 	butler:Connect(animator.AnimationPlayed, function(animationTrack: AnimationTrack)
 		if not AnimationNames[animationTrack.Animation.Name] then return end
 
 		local cn = butler:Connect(animationTrack:GetMarkerReachedSignal("Footstep"), function()
+			if tick() - lastFootstep < FOOTSTEP_DEBOUNCE then return end
+			lastFootstep = tick()
+
 			local MaterialName = humanoid.FloorMaterial.Name
 			if MaterialName == "Air" then return end
+
 			local Sounds = FootstepsSounds[MaterialName]:GetChildren()
 			local SelectedSound = Sounds[math.random(1, #Sounds)]:Clone() :: Sound
+
 			SelectedSound.Parent = humanoidRootPart
 			SelectedSound.SoundGroup = EffectsGroup
+
 			local randomSpeed = math.random() * (MAX_SPEED - MIN_SPEED) + MIN_SPEED
 			SelectedSound.PlaybackSpeed = math.round(randomSpeed * 1000) / 1000
 
@@ -49,6 +61,7 @@ function FootstepsController.OnCharacterAdded(_, characterEntity: jecs.Entity)
 			local randomTremolo = math.random() * (MAX_TREMOLO - MIN_TREMOLO) + MIN_TREMOLO
 			tremoloSound.Depth = math.round(randomTremolo * 1000) / 1000
 			tremoloSound.Parent = SelectedSound
+
 			local id = SoundsController.AddSound(SelectedSound)
 
 			butler:Once(SelectedSound.Ended, function()

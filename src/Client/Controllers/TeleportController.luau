@@ -18,18 +18,15 @@ function TeleportController.Teleport(location: number)
 	local character = Player.Character :: TCharacter.TCharacter
 
 	if location == ELocations.SoulRealm then
-		if character then character.Humanoid.AutoRotate = false end
+		CameraController.EnableCinematicCamera()
 		Camera.CameraSubject = SoulRealmCamera
 		CameraController.UnlockCamera()
-		CameraController.Update()
 		TweensController.SetImmobile(false, 0.01)
 	elseif character then
-		Camera.Focus = character.Head
-		character.Humanoid.AutoRotate = true
+		CameraController.DisableCinematicCamera()
 		MouseController.HideMouse()
 		CameraController.LockCamera()
 		TweensController.SetImmobile(false, 0.01)
-		CameraController.Update()
 	end
 end
 

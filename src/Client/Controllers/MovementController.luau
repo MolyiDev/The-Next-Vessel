@@ -8,6 +8,7 @@ local Components = require(ReplicatedStorage.Shared.ECS.Components)
 local World = require(ReplicatedStorage.Shared.ECS.Worlds.World)
 local Tools = require(ReplicatedStorage.Shared.Utils.Tools)
 local ECameraFovs = require(ReplicatedStorage.Types.Enums.ECameraFovs)
+local EDirections = require(ReplicatedStorage.Types.Enums.EDirections)
 local EMovementJumps = require(ReplicatedStorage.Types.Enums.Movement.EMovementJumps)
 local EMovementSpeeds = require(ReplicatedStorage.Types.Enums.Movement.EMovementSpeeds)
 local TCharacter = require(ReplicatedStorage.Types.TCharacter)
@@ -16,17 +17,27 @@ local FADE_OUT = 0.4
 local FADE_IN = 0.4
 local LIMIT = 1.32
 local WALK_ANIM_SPEED = 1
-local RUN_ANIM_SPEED = 1
+local RUN_ANIM_SPEED = 1.4
 
 local AnimationsFolder = ReplicatedStorage.Animations
+local RunAnimationsFolder = AnimationsFolder.Running
+local WalkAnimationsFolder = AnimationsFolder.Walking
 
 local IdleAnim = AnimationsFolder.Idle :: Animation
-local RunAnim = AnimationsFolder.Run :: Animation
-local WalkAnim = AnimationsFolder.Walk :: Animation
+local RunFrontAnim = RunAnimationsFolder.RunFront :: Animation
+local WalkFrontAnim = WalkAnimationsFolder.WalkFront :: Animation
+local WalkBackAnim = WalkAnimationsFolder.WalkBack :: Animation
+local WalkLeftAnim = WalkAnimationsFolder.WalkLeft :: Animation
+local WalkRightAnim = WalkAnimationsFolder.WalkRight :: Animation
 
-local Run: AnimationTrack
-local Walk: AnimationTrack
 local Idle: AnimationTrack
+local RunFront: AnimationTrack
+local WalkFront: AnimationTrack
+local WalkBack: AnimationTrack
+local WalkLeft: AnimationTrack
+local WalkRight: AnimationTrack
+
+local WalkAnimations: { [Vector3]: { AnimationTrack } } = {}
 
 local Character: TCharacter.TCharacter
 local PrevAnimation: AnimationTrack?
@@ -43,8 +54,11 @@ local function stopAllAnimations(fadeOut: number)
 	PrevAnimationStop = tick()
 	PrevAnimationTimePosition = if PrevAnimation then PrevAnimation.TimePosition else 0
 
-	Run:Stop(fadeOut)
-	Walk:Stop(fadeOut)
+	RunFront:Stop(fadeOut)
+	WalkFront:Stop(fadeOut)
+	WalkBack:Stop(fadeOut)
+	WalkLeft:Stop(fadeOut)
+	WalkRight:Stop(fadeOut)
 end
 
 local function getAnimTime(): number
@@ -77,8 +91,15 @@ local function updateSpeeds()
 	humanoid.WalkSpeed = CurrentBaseSpeed * TimeController.TimeScale
 	humanoid.JumpHeight = CurrentBaseJump * TimeController.TimeScale
 
-	if Run and Run.IsPlaying then Run:AdjustSpeed(runAnimSpeed()) end
-	if Walk and Walk.IsPlaying then Walk:AdjustSpeed(walkAnimSpeed()) end
+	if RunFront and RunFront.IsPlaying then RunFront:AdjustSpeed(runAnimSpeed()) end
+
+	local currentWalkSpeed = walkAnimSpeed()
+
+	if WalkFront and WalkFront.IsPlaying then WalkFront:AdjustSpeed(currentWalkSpeed) end
+	if WalkBack and WalkBack.IsPlaying then WalkBack:AdjustSpeed(currentWalkSpeed) end
+	if WalkLeft and WalkLeft.IsPlaying then WalkLeft:AdjustSpeed(currentWalkSpeed) end
+	if WalkRight and WalkRight.IsPlaying then WalkRight:AdjustSpeed(currentWalkSpeed) end
+
 	if Idle and Idle.IsPlaying then Idle:AdjustSpeed(0.65 * TimeController.TimeScale) end
 end
 
@@ -92,21 +113,28 @@ local function moveDirection()
 	if ShiftTouched and Direction.Z ~= 1 then
 		CurrentBaseSpeed = EMovementSpeeds.Running
 		CurrentBaseJump = EMovementJumps.Running
-		TweensController.SetCameraFov(ECameraFovs.Running, TweenInfo.new(1))
-		TweensController.SetSpeed(CurrentBaseSpeed * TimeController.TimeScale, 1)
-		TweensController.SetJump(CurrentBaseJump * TimeController.TimeScale, 1)
-		Run:Play(FADE_IN, 1, runAnimSpeed())
-		if PrevAnimation == Run then Run.TimePosition = getAnimTime() end
-		PrevAnimation = Run
+		TweensController.SetCameraFov(ECameraFovs.Running, TweenInfo.new(0.25))
+		TweensController.SetSpeed(CurrentBaseSpeed * TimeController.TimeScale, 0.25)
+		TweensController.SetJump(CurrentBaseJump * TimeController.TimeScale, 0.25)
+		RunFront:Play(FADE_IN, 1, runAnimSpeed())
+		if PrevAnimation == RunFront then RunFront.TimePosition = getAnimTime() end
+		PrevAnimation = RunFront
 	else
 		CurrentBaseSpeed = EMovementSpeeds.Default
 		CurrentBaseJump = EMovementJumps.Default
-		TweensController.SetCameraFov(ECameraFovs.Default, TweenInfo.new(0.65))
-		TweensController.SetSpeed(CurrentBaseSpeed * TimeController.TimeScale, 0.65)
-		TweensController.SetJump(CurrentBaseJump * TimeController.TimeScale, 0.65)
-		Walk:Play(FADE_IN, 1, walkAnimSpeed())
-		if PrevAnimation == Walk then Walk.TimePosition = getAnimTime() end
-		PrevAnimation = Walk
+		TweensController.SetCameraFov(ECameraFovs.Default, TweenInfo.new(0.25))
+		TweensController.SetSpeed(CurrentBaseSpeed * TimeController.TimeScale, 0.25)
+		TweensController.SetJump(CurrentBaseJump * TimeController.TimeScale, 0.25)
+		local animations = WalkAnimations[Direction]
+		local syncTime = getAnimTime()
+
+		if animations then
+			for _, anim in animations do
+				anim:Play(FADE_IN, 1, walkAnimSpeed())
+				anim.TimePosition = syncTime
+				PrevAnimation = anim
+			end
+		end
 	end
 end
 
@@ -137,8 +165,23 @@ MovementController.OnCharacterAdded = function(character: TCharacter.TCharacter,
 	Idle = animator:LoadAnimation(IdleAnim)
 	Idle:Play(0.1, 1, 0.65)
 
-	Run = animator:LoadAnimation(RunAnim)
-	Walk = animator:LoadAnimation(WalkAnim)
+	-- Run animations
+	RunFront = animator:LoadAnimation(RunFrontAnim)
+
+	-- Walk animations
+	WalkFront = animator:LoadAnimation(WalkFrontAnim)
+	WalkBack = animator:LoadAnimation(WalkBackAnim)
+	WalkLeft = animator:LoadAnimation(WalkLeftAnim)
+	WalkRight = animator:LoadAnimation(WalkRightAnim)
+
+	WalkAnimations[EDirections.Front] = { WalkFront }
+	WalkAnimations[EDirections.FrontLeft] = { WalkFront, WalkLeft }
+	WalkAnimations[EDirections.FrontRight] = { WalkFront, WalkRight }
+	WalkAnimations[EDirections.Back] = { WalkBack }
+	WalkAnimations[EDirections.BackLeft] = { WalkBack, WalkRight }
+	WalkAnimations[EDirections.BackRight] = { WalkBack, WalkLeft }
+	WalkAnimations[EDirections.Left] = { WalkLeft }
+	WalkAnimations[EDirections.Right] = { WalkRight }
 
 	butler:Connect(humanoid:GetPropertyChangedSignal("MoveDirection"), moveDirection)
 	butler:Connect(humanoid:GetPropertyChangedSignal("WalkSpeed"), moveDirection)

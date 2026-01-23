@@ -2,13 +2,13 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
-local Workspace = game:GetService("Workspace")
 local BossController = require(script.Parent.BossController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local EScenes = require(ReplicatedStorage.Types.Enums.EScenes)
 local EUpgrades = require(ReplicatedStorage.Types.Enums.EUpgrades)
 local CameraController = require(script.Parent.CameraController)
+local EnemiesController = require(script.Parent.EnemiesController)
 local HealthController = require(script.Parent.HealthController)
 local MouseController = require(script.Parent.MouseController)
 local ProjectileController = require(script.Parent.ProjectileController)
@@ -29,16 +29,16 @@ local Player = Players.LocalPlayer
 local ActiveSceneModule: TScene.TScene?
 local InputBeganConnection: RBXScriptConnection?
 
-local function startCharacter(character: TCharacter.TCharacter)
-	character.Humanoid.AutoRotate = true
+local function startCharacter()
 	MouseController.HideMouse()
-	CameraController.LockCamera()
+	CameraController.DisableCinematicCamera()
 	TweensController.SetImmobile(false)
 end
 
 local function resetGlobalState()
 	TimeController.Resume(0)
 	ProjectileController.Cleanup()
+	EnemiesController.Cleanup()
 	BossController.Reset()
 	TweensController.SetImmobile(false)
 end
@@ -80,7 +80,7 @@ end
 
 SceneController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 	if SceneController.IsGameStarted() then
-		startCharacter(character)
+		startCharacter()
 
 		if ActiveSceneModule and ActiveSceneModule.CharacterAdded then ActiveSceneModule.CharacterAdded(character) end
 		return
@@ -92,7 +92,7 @@ SceneController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 	end
 
 	-- The game has not started.
-	character.Humanoid.AutoRotate = false
+	CameraController.EnableCinematicCamera()
 	TweensController.SetImmobile(true, 0.01)
 
 	InputBeganConnection = UserInputService.InputBegan:Connect(function(input, gp)
@@ -103,7 +103,7 @@ SceneController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 			InputBeganConnection = nil
 		end
 
-		startCharacter(character)
+		startCharacter()
 		SceneController.OnGameStarted:Fire()
 
 		-- Test
@@ -130,7 +130,6 @@ end)
 HealthController.OnRevived:Connect(function()
 	local character = Player.Character :: TCharacter.TCharacter
 	if not character then return end
-	local camera = Workspace.CurrentCamera
 
 	if SceneController.CurrentScene < EScenes.Second then
 		local firstSpawn = CollectionService:GetTagged("FirstSpawn")[1] :: Attachment
@@ -140,13 +139,8 @@ HealthController.OnRevived:Connect(function()
 		if secondSpawn then character.HumanoidRootPart.CFrame = secondSpawn.WorldCFrame end
 	end
 
-	camera.CameraSubject = character.Head
-	camera.Focus = camera.CameraSubject.CFrame
-	camera.CFrame = camera.Focus
-
-	CameraController.UpdateRotation()
-
-	startCharacter(character)
+	CameraController.DisableCinematicCamera()
+	startCharacter()
 end)
 
 return Ignis.Register(SceneController)

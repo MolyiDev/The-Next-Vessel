@@ -2,6 +2,7 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local BossController = require(script.Parent.BossController)
@@ -11,6 +12,7 @@ local HealthController = require(script.Parent.HealthController)
 local KnockbackController = require(script.Parent.KnockbackController)
 local ParryController = require(script.Parent.ParryController)
 local SoundsController = require(script.Parent.SoundsController)
+local TargetController = require(script.Parent.TargetController)
 local TimeController = require(script.Parent.TimeController)
 local jecs = require(ReplicatedStorage.Packages.jecs)
 local Components = require(ReplicatedStorage.Shared.ECS.Components)
@@ -68,43 +70,24 @@ function ProjectileController.OnCharacterAdded(character: TCharacter.TCharacter)
 	RayParams.FilterDescendantsInstances = { character, ProjectilesZone, BossController.GetRig() }
 end
 
-function ProjectileController.AddProjectile(
+local function spawnProjectileInternal(
 	initialPos: Vector3,
-	targetPos: Vector3,
+	direction: Vector3,
+	target: (BasePart | Attachment)?,
 	speed: number,
 	radius: number,
 	sender: number,
-	damage: number?,
-	health: number?
+	damage: number,
+	health: number
 )
 	if ProjectileController.ProjectileCount >= MAX_PROJECTILES then return end
 
 	local model = ProjectilePool:Get() :: Projectile
 	local projectileEntity = WorldRef:EntityRef(model)
 	local root = model.Sphere.Root
-	local initialCF = CFrame.new(initialPos, targetPos)
+	local initialCF = CFrame.lookAt(initialPos, direction)
 
-	if sender == ProjectileController.ESender.Player then
-		model.Sphere.Color = SENDER_PLAYER_SPHERE_COLOR
-		root.Glow.Color = SENDER_PLAYER_EFFECT_COLOR
-		root.Sparks.Color = SENDER_PLAYER_EFFECT_COLOR
-		root.Trail.Color = SENDER_PLAYER_EFFECT_COLOR
-	else
-		model.Sphere.Color = SENDER_ENEMY_SPHERE_COLOR
-		root.Glow.Color = SENDER_ENEMY_EFFECT_COLOR
-		root.Sparks.Color = SENDER_ENEMY_EFFECT_COLOR
-		root.Trail.Color = SENDER_ENEMY_EFFECT_COLOR
-	end
-
-	root.CFrame = initialCF
-
-	task.defer(function()
-		model.Sphere.Root.Trail.Enabled = true
-	end)
-
-	ProjectileController.ProjectileCount += 1
-
-	jecs.bulk_insert(World, projectileEntity, {
+	local components: { any } = {
 		Components.CFrame,
 		Components.Direction,
 		Components.Speed,
@@ -113,79 +96,73 @@ function ProjectileController.AddProjectile(
 		Components.Bone,
 		Components.Health,
 		Components.Damage,
-		Tags.Projectile,
-	}, {
+	}
+
+	local values: { any } = {
 		initialCF,
-		(targetPos - initialPos).Unit,
+		(direction - initialPos).Unit,
 		speed,
 		radius,
 		model,
 		root,
-		health or 1,
-		damage or 0,
-	})
+		health,
+		damage,
+	}
+
+	if target then
+		components[#components + 1] = Components.Target
+		values[#values + 1] = target
+	end
+
+	components[#components + 1] = Tags.Projectile
+
+	local isPlayer = sender == ProjectileController.ESender.Player
+	local sphereColor = if isPlayer then SENDER_PLAYER_SPHERE_COLOR else SENDER_ENEMY_SPHERE_COLOR
+	local effectColor = if isPlayer then SENDER_PLAYER_EFFECT_COLOR else SENDER_ENEMY_EFFECT_COLOR
+	local safeTag = if isPlayer then Tags.SafePlayer else Tags.SafeEnemy
+
+	model.Sphere.Color = sphereColor
+	root.Glow.Color = effectColor
+	root.Sparks.Color = effectColor
+	root.Trail.Color = effectColor
+
+	components[#components + 1] = safeTag
+
+	-- 4. Finalize
+	root.CFrame = initialCF
+
+	task.defer(function()
+		model.Sphere.Root.Trail.Enabled = true
+	end)
+
+	ProjectileController.ProjectileCount += 1
+
+	jecs.bulk_insert(World, projectileEntity, components, values)
+end
+
+function ProjectileController.AddProjectile(
+	initialPos: Vector3,
+	direction: Vector3,
+	speed: number,
+	radius: number,
+	sender: number,
+	damage: number?,
+	health: number?
+)
+	spawnProjectileInternal(initialPos, direction, nil, speed, radius, sender, damage or 0, health or 1)
 end
 
 function ProjectileController.AddProjectileMissile(
 	initialPos: Vector3,
 	direction: Vector3,
-	target: BasePart,
+	target: BasePart | Attachment,
 	speed: number,
 	radius: number,
 	sender: number,
 	damage: number?,
 	health: number?
 )
-	if ProjectileController.ProjectileCount >= MAX_PROJECTILES then return end
-
-	local model = ProjectilePool:Get() :: Projectile
-	local projectileEntity = WorldRef:EntityRef(model)
-	local root = model.Sphere.Root
-	local initialCF = CFrame.new(initialPos, direction)
-
-	if sender == ProjectileController.ESender.Player then
-		model.Sphere.Color = SENDER_PLAYER_SPHERE_COLOR
-		root.Glow.Color = SENDER_PLAYER_EFFECT_COLOR
-		root.Sparks.Color = SENDER_PLAYER_EFFECT_COLOR
-		root.Trail.Color = SENDER_PLAYER_EFFECT_COLOR
-	else
-		model.Sphere.Color = SENDER_ENEMY_SPHERE_COLOR
-		root.Glow.Color = SENDER_ENEMY_EFFECT_COLOR
-		root.Sparks.Color = SENDER_ENEMY_EFFECT_COLOR
-		root.Trail.Color = SENDER_ENEMY_EFFECT_COLOR
-	end
-
-	root.CFrame = initialCF
-
-	task.defer(function()
-		model.Sphere.Root.Trail.Enabled = true
-	end)
-
-	model.Sphere.Root.Trail.Enabled = true
-	ProjectileController.ProjectileCount += 1
-
-	jecs.bulk_insert(World, projectileEntity, {
-		Components.CFrame,
-		Components.Direction,
-		Components.Target,
-		Components.Speed,
-		Components.Radius,
-		Components.Model,
-		Components.Bone,
-		Components.Health,
-		Components.Damage,
-		Tags.Projectile,
-	}, {
-		initialCF,
-		(direction - initialPos).Unit,
-		target,
-		speed,
-		radius,
-		model,
-		root,
-		health or 1,
-		damage or 0,
-	})
+	spawnProjectileInternal(initialPos, direction, target, speed, radius, sender, damage or 0, health or 1)
 end
 
 local function destroy(projectileEntity: jecs.Entity, model: Projectile)
@@ -229,6 +206,41 @@ function ProjectileController.Cleanup()
 	end
 end
 
+UserInputService.InputBegan:Connect(function(input, gp)
+	if gp then return end
+	if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+	if not DashController.UseAmmo() then return end
+	local targetEnt, targetPos = TargetController.GetTarget()
+	local targetInstance = nil
+
+	-- Try to find the physical part/attachment to home in on
+	if targetEnt then
+		targetInstance = World:get(targetEnt, Components.Attachment)
+			or World:get(targetEnt, Components.Model)
+			or World:get(targetEnt, Components.Bone)
+	end
+
+	if not targetInstance then return end
+	local char = Player.Character
+	if not char then return end
+
+	local startPos = char.PrimaryPart.Position + Vector3.new(0, 2, 0)
+	local dir = (targetPos - startPos).Unit
+
+	ProjectileController.AddProjectileMissile(
+		startPos,
+		dir,
+		targetInstance,
+		90, -- Speed
+		2.5, -- Radius
+		ProjectileController.ESender.Player,
+		20, -- Damage
+		1 -- Health
+	)
+
+	-- SoundsController.PlayCharacter(ESounds.Parry) -- Placeholder sound
+end)
+
 RunService.Heartbeat:Connect(function(rawDt: number)
 	local dt = TimeController.GetDeltaTime(rawDt)
 	if dt <= 0.001 then return end
@@ -249,7 +261,15 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 
 		-- Target turn
 		if target and target.Parent then
-			local targetPos = target.Position
+			local targetPos: Vector3
+			if target:IsA("Attachment") then
+				targetPos = target.WorldPosition
+			elseif target:IsA("BasePart") then
+				targetPos = target.Position
+			else
+				targetPos = (target :: any).Position
+			end
+
 			local currentDir = direction
 			local targetDir = (targetPos - currentPos).Unit
 			local dynamicTurnSpeed = PARRY_STRENGTH + (speed / 40)
@@ -264,7 +284,7 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 		local segLenSq = displacement.Magnitude * displacement.Magnitude
 
 		-- Boss parry / damage
-		if World:has(entity, Tags.Parried) and bossRoot then
+		if (World:has(entity, Tags.Parried) or World:has(entity, Tags.SafePlayer)) and bossRoot then
 			local toBoss = bossRoot.Position - currentPos
 
 			local t = if segLenSq > 0 then toBoss:Dot(displacement) / segLenSq else 0
@@ -308,7 +328,7 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 		end
 
 		-- Character parry / damage / dash
-		if characterPos and not World:has(entity, Tags.Parried) then
+		if characterPos and not World:has(entity, Tags.Parried) and not World:has(entity, Tags.SafePlayer) then
 			local toPlayer = characterPos - currentPos
 
 			local t = if segLenSq > 0 then toPlayer:Dot(displacement) / segLenSq else 0
@@ -332,13 +352,27 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 					World:set(entity, Components.Health, health - 1)
 
 					local camLook = Camera.CFrame.LookVector
-
 					local speedMult = ParryController.GetChargeMultiplier()
+					local targetEntity, targetPos = TargetController.GetTarget()
 
 					World:add(entity, Tags.Parried)
-					if bossRoot then World:set(entity, Components.Target, bossRoot) end
 
-					World:set(entity, Components.Direction, camLook)
+					if targetEntity then
+						local targetAttach = World:get(targetEntity, Components.Attachment)
+						if targetAttach then
+							World:set(entity, Components.Target, targetAttach)
+							local dirToTarget = (targetPos - currentPos).Unit
+							World:set(entity, Components.Direction, dirToTarget)
+						else
+							World:set(entity, Components.Direction, camLook)
+						end
+					elseif bossRoot then
+						World:set(entity, Components.Target, bossRoot)
+						World:set(entity, Components.Direction, camLook)
+					else
+						World:set(entity, Components.Direction, camLook)
+					end
+
 					World:set(entity, Components.Speed, speed * speedMult)
 
 					local impactPos = closestPointOnPath
@@ -347,7 +381,8 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 					ParryController.SuccessfulParry()
 					continue
 				elseif DashController.IsDashing() then
-					ProjectileController.BreakProjectile(entity)
+					DashController.AddAmmo()
+					ProjectileController.RemoveProjectile(entity)
 					continue
 				end
 			end
@@ -371,24 +406,27 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 		-- Wall Check
 		local rayResult = workspace:Raycast(currentPos, displacement, RayParams)
 		if rayResult and not rayResult.Instance:HasTag("ProjectileSafe") then
-			local currentHealth = World:get(entity, Components.Health) or 1
-			local newHealth = currentHealth - 1
+			if target then
+				local currentHealth = World:get(entity, Components.Health) or 1
+				local newHealth = currentHealth - 1
 
-			if newHealth <= 0 then
+				if newHealth <= 0 then
+					ProjectileController.BreakProjectile(entity)
+					continue
+				end
+
+				-- Reflection Formula: r = d - 2(d • n)n
+				local normal = rayResult.Normal
+				local reflectedDir = direction - (2 * direction:Dot(normal) * normal)
+
+				World:set(entity, Components.Health, newHealth)
+				World:set(entity, Components.Direction, reflectedDir)
+
+				local impactPos = rayResult.Position + (normal * 0.1)
+				World:set(entity, Components.CFrame, CFrame.lookAt(impactPos, impactPos + reflectedDir))
+			else
 				ProjectileController.BreakProjectile(entity)
-				continue
 			end
-
-			-- Reflection Formula: r = d - 2(d • n)n
-			local normal = rayResult.Normal
-			local reflectedDir = direction - (2 * direction:Dot(normal) * normal)
-
-			World:set(entity, Components.Health, newHealth)
-			World:set(entity, Components.Direction, reflectedDir)
-
-			-- Snap to impact point with slight offset to prevent immediate re-collision
-			local impactPos = rayResult.Position + (normal * 0.1)
-			World:set(entity, Components.CFrame, CFrame.lookAt(impactPos, impactPos + reflectedDir))
 
 			continue
 		end

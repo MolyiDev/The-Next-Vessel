@@ -12,7 +12,8 @@ local Tools = require(ReplicatedStorage.Shared.Utils.Tools)
 
 local SELECTION_THRESHOLD_PX = 80 -- How close (in pixels) you must click to the enemy
 local MAX_SELECTION_DIST = 500 -- Max distance in studs to select
-local RETICLE_SIZE_STUDS = 7 -- How "wide" the arrow circle is in world studs
+local DEFAULT_RADIUS = 2 -- Fallback radius
+local RETICLE_SIZE_MULT = 2.5 -- Multiplier for the reticle size based on radius
 local MIN_SIZE_PX = 10 -- Minimum size in pixels (so it doesn't vanish completely)
 local MAX_SIZE_PX = 100 -- Maximum size in pixels (so it doesn't cover entire screen up close)
 local ARROW_TARGET = "rbxassetid://129623063194632"
@@ -64,7 +65,7 @@ local function CreateReticle(name: string, color: Color3): Reticle
 		img.Image = ARROW_TARGET
 		img.ImageColor3 = color
 		img.BackgroundTransparency = 1
-		img.Size = UDim2.fromScale(0.4, 0.4)
+		img.Size = UDim2.fromScale(0.3, 0.3)
 		img.ImageTransparency = 0.25
 		img.Position = positions[i]
 		img.AnchorPoint = anchorPoints[i]
@@ -93,19 +94,19 @@ local HoverTargetEntity: jecs.Entity? = nil
 local SelectionStartTime = 0
 local LastHoverCheck = 0
 
-function TargetController.GetTarget(): jecs.Entity?
-	if not CurrentTargetEntity then return end
+function TargetController.GetTarget(): (jecs.Entity?, Vector3?)
+	if not CurrentTargetEntity then return nil, nil end
 
 	if not World:contains(CurrentTargetEntity) then
 		TargetController.OnTargetDestroyed()
-		return nil
+		return nil, nil
 	end
 
 	local cf = World:get(CurrentTargetEntity, Components.CFrame)
 	if cf then return CurrentTargetEntity, cf.Position end
 
 	TargetController.OnTargetDestroyed()
-	return nil
+	return nil, nil
 end
 
 function TargetController.OnTargetDestroyed()
@@ -166,6 +167,8 @@ end
 
 local function UpdateReticleVisuals(reticle: Reticle, entity: jecs.Entity, dt: number, isSelected: boolean)
 	local cf = World:get(entity, Components.CFrame)
+	local radius = World:get(entity, Components.Radius) or DEFAULT_RADIUS
+
 	if not cf then
 		reticle.Container.Visible = false
 		return
@@ -183,7 +186,7 @@ local function UpdateReticleVisuals(reticle: Reticle, entity: jecs.Entity, dt: n
 	reticle.Container.Visible = true
 	reticle.Container.Position = UDim2.fromOffset(screenPos.X, screenPos.Y)
 
-	local basePixelSize = GetProjectedSize(dist, RETICLE_SIZE_STUDS)
+	local basePixelSize = GetProjectedSize(dist, radius * RETICLE_SIZE_MULT)
 
 	if isSelected then
 		local timeActive = os.clock() - SelectionStartTime
@@ -208,7 +211,6 @@ local function UpdateReticleVisuals(reticle: Reticle, entity: jecs.Entity, dt: n
 		reticle.Container.Rotation = 0
 	end
 end
-
 local function targetSystem(rawDt: number)
 	local dt = TimeController.GetDeltaTime(rawDt)
 	if dt <= 0.001 then return end

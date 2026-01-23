@@ -2,6 +2,7 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local EnemiesController = require(script.Parent.Parent.Controllers.EnemiesController)
 local HotbarController = require(script.Parent.Parent.Controllers.HotbarController)
 local BossSpawnController = require(script.Parent.Parent.Controllers.BossController.BossSpawnController)
 local BossLifebarController = require(script.Parent.Parent.Controllers.BossController.BossLifebarController)
@@ -21,6 +22,7 @@ local EDialogue = require(ReplicatedStorage.Types.Enums.EDialogue)
 local EFlames = require(ReplicatedStorage.Types.Enums.EFlames)
 local ELocations = require(ReplicatedStorage.Types.Enums.ELocations)
 local EScenes = require(ReplicatedStorage.Types.Enums.EScenes)
+local EUpgrades = require(ReplicatedStorage.Types.Enums.EUpgrades)
 local TScene = require(ReplicatedStorage.Types.TScene)
 
 type Scene = {
@@ -160,7 +162,10 @@ function Scene_Third.Start()
 			end
 		end)
 		:andThen(function()
+			HotbarController.Disappear()
+			BossLifebarController.Disappear()
 			ProjectileController.Cleanup()
+			EnemiesController.Cleanup()
 			TeleportController.Teleport(ELocations.SoulRealm)
 			return Promise.delay(1)
 		end)
@@ -178,8 +183,10 @@ function Scene_Third.Start()
 			-- If the player died while the boss was 'hardened' and doesnt have the ability to break the 'hardened skin' then the wish 'Be able to break harden' will appear
 			-- If the player died because of the boss poison and doesnt have the poison resistance  then the wish 'Be able to withstand poison' will appear
 			-- If the player died after failing a parry and doesnt have the ability to block then the wish 'Be able to block' will appear
+			local upgrades = {}
 
-			return UpgradesController.Show({}, true)
+			if not UpgradesController.HasUpgrade(EUpgrades.Dash) then upgrades[#upgrades + 1] = EUpgrades.Dash end
+			return UpgradesController.Show(upgrades, true)
 		end)
 		:andThen(function(upgradeId: number)
 			Scene_Third.SelectedUpgrade = upgradeId

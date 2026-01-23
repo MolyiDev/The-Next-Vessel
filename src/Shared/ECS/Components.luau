@@ -13,7 +13,7 @@ local Components = {
 
 	-- Projectiles
 	CFrame = jecs.component() :: jecs.Id<CFrame>,
-	Target = jecs.component() :: jecs.Id<BasePart>,
+	Target = jecs.component() :: jecs.Id<BasePart | Attachment>,
 	Direction = jecs.component() :: jecs.Id<Vector3>,
 	Speed = jecs.component() :: jecs.Id<number>,
 	Radius = jecs.component() :: jecs.Id<number>,
