@@ -157,7 +157,6 @@ end
 local function UpdateCamera(rawDt: number)
 	local dt = TimeController.GetDeltaTime(rawDt)
 	AccumulatedTime += dt -- Raw time for sine waves (correct)
-
 	local scaledDt = dt * 60 -- Scaled time for Lerps
 
 	UserInputService.MouseBehavior = CameraController.CameraLocked and Enum.MouseBehavior.LockCenter
@@ -192,8 +191,8 @@ local function UpdateCamera(rawDt: number)
 
 	local baseCFrame = Camera.Focus * CFrame.fromEulerAnglesYXZ(CameraPitch, CameraYaw, 0) * CFrame.new(0, 0.75, -0.1)
 
-	local velocity = HumanoidRootPart.AssemblyAngularVelocity
-	local speed = Vector3.new(velocity.x, 0, velocity.z).magnitude
+	local velocity = HumanoidRootPart.AssemblyLinearVelocity
+	local speed = Vector3.new(velocity.x, 0, velocity.z).Magnitude
 
 	local freq = 0
 	local amp = 0
@@ -201,12 +200,15 @@ local function UpdateCamera(rawDt: number)
 	if speed > Config.Run.Threshold then
 		freq = Config.Run.Freq
 		amp = Config.Run.Amp
+		speed = Config.Run.Threshold
 	elseif speed > Config.Walk.Threshold then
 		freq = Config.Walk.Freq
 		amp = Config.Walk.Amp
+		speed = Config.Walk.Threshold
 	elseif speed > Config.Idle.Threshold then
 		freq = Config.Idle.Freq
 		amp = Config.Idle.Amp
+		speed = Config.Idle.Threshold
 	end
 
 	-- FIX 1: Clamp Max Alpha to 0.5.
@@ -230,7 +232,7 @@ local function UpdateCamera(rawDt: number)
 
 	local walkSpeed = math.max(Humanoid.WalkSpeed, 0.01)
 	VelTilt = math.clamp(
-		Tools.Lerp(VelTilt, Camera.CFrame:VectorToObjectSpace(velocity / walkSpeed).x * 0.08, 0.1 * scaledDt),
+		Tools.Lerp(VelTilt, -Camera.CFrame:VectorToObjectSpace(velocity / walkSpeed).x * 0.08, 0.1 * scaledDt),
 		-0.35,
 		0.2
 	)

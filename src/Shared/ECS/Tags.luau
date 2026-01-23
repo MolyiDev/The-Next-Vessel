@@ -6,6 +6,7 @@ local Tags = {
 	Alive = jecs.tag(), -- If the player is alive, use with(alive)
 	Character = jecs.tag(),
 	Projectile = jecs.tag(),
+	Enemy = jecs.tag(),
 	Parried = jecs.tag(),
 }
 

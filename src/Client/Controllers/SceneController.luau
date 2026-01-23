@@ -91,7 +91,6 @@ SceneController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 	end
 
 	-- The game has not started.
-	print("scene")
 	character.Humanoid.AutoRotate = false
 	TweensController.SetImmobile(true, 0.01)
 

@@ -16,6 +16,14 @@ Fluid.mount(function()
 	return UI.UI
 end, PlayerGui)
 
+function HotbarController.Appear()
+	UI.Appear()
+end
+
+function HotbarController.Disappear()
+	UI.Disappear()
+end
+
 HealthController.OnDamaged:Connect(function(_, new)
 	-- TODO: Make a sound.
 	UI.SetCurrentHealth(new)

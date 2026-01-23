@@ -6,6 +6,7 @@ local Workspace = game:GetService("Workspace")
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local BossController = require(script.Parent.BossController)
 local DashController = require(script.Parent.DashController)
+local FloatingNumbersController = require(script.Parent.FloatingNumbersController)
 local HealthController = require(script.Parent.HealthController)
 local KnockbackController = require(script.Parent.KnockbackController)
 local ParryController = require(script.Parent.ParryController)
@@ -39,17 +40,19 @@ type SpellBreak = {
 } & Attachment
 
 local PARRY_STRENGTH = 4
+local MAX_PROJECTILES = 80
 
 local Player = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 local ProjectileModel = ReplicatedStorage:WaitForChild("Models"):WaitForChild("Projectile") :: Projectile
 local ProjectileBreakEffect = ReplicatedStorage:WaitForChild("Effects"):WaitForChild("SpellBreak") :: SpellBreak
 local ProjectilesZone = CollectionService:GetTagged("ProjectilesZone")[1] :: BasePart
-local ProjectilePool = ObjectPooler.new(ProjectileModel, 200, 50, ObjectPooler.ReturnBoneModel, Workspace.Projectiles)
+local ProjectilePool = ObjectPooler.new(ProjectileModel, 80, 1, ObjectPooler.ReturnBoneModel, Workspace.Projectiles)
 local RayParams = RaycastParams.new()
 RayParams.FilterType = Enum.RaycastFilterType.Exclude
 
 local ProjectileController = {}
+ProjectileController.ProjectileCount = 0
 ProjectileController.ProjectilesSpawnLow = CollectionService:GetTagged("ProjectilesSpawnLow")[1] :: BasePart
 ProjectileController.ProjectilesSpawnHigh = CollectionService:GetTagged("ProjectilesSpawnHigh")[1] :: BasePart
 
@@ -65,10 +68,16 @@ function ProjectileController.AddProjectile(
 	damage: number?,
 	health: number?
 )
+	if ProjectileController.ProjectileCount >= MAX_PROJECTILES then return end
+
 	local model = ProjectilePool:Get() :: Projectile
 	local projectileEntity = WorldRef:EntityRef(model)
+	local root = model.Sphere.Root
+	local initialCF = CFrame.new(initialPos, targetPos)
+	root.CFrame = initialCF
 
 	model.Sphere.Root.Trail.Enabled = true
+	ProjectileController.ProjectileCount += 1
 
 	jecs.bulk_insert(World, projectileEntity, {
 		Components.CFrame,
@@ -81,12 +90,12 @@ function ProjectileController.AddProjectile(
 		Components.Damage,
 		Tags.Projectile,
 	}, {
-		CFrame.new(initialPos, targetPos),
+		initialCF,
 		(targetPos - initialPos).Unit,
 		speed,
 		radius,
 		model,
-		model.Sphere.Root,
+		root,
 		health or 1,
 		damage or 0,
 	})
@@ -101,10 +110,16 @@ function ProjectileController.AddProjectileMissile(
 	damage: number?,
 	health: number?
 )
+	if ProjectileController.ProjectileCount >= MAX_PROJECTILES then return end
+
 	local model = ProjectilePool:Get() :: Projectile
 	local projectileEntity = WorldRef:EntityRef(model)
+	local root = model.Sphere.Root
+	local initialCF = CFrame.new(initialPos, direction)
+	root.CFrame = initialCF
 
 	model.Sphere.Root.Trail.Enabled = true
+	ProjectileController.ProjectileCount += 1
 
 	jecs.bulk_insert(World, projectileEntity, {
 		Components.CFrame,
@@ -118,22 +133,23 @@ function ProjectileController.AddProjectileMissile(
 		Components.Damage,
 		Tags.Projectile,
 	}, {
-		CFrame.new(initialPos, direction),
+		initialCF,
 		(direction - initialPos).Unit,
 		target,
 		speed,
 		radius,
 		model,
-		model.Sphere.Root,
+		root,
 		health or 1,
 		damage or 0,
 	})
 end
 
 local function destroy(projectileEntity: jecs.Entity, model: Projectile)
-	WorldRef:Nuke(model, projectileEntity)
 	model.Sphere.Root.Trail.Enabled = false
+	WorldRef:Nuke(model, projectileEntity)
 	ProjectilePool:Return(model)
+	ProjectileController.ProjectileCount -= 1
 end
 
 function ProjectileController.RemoveProjectile(projectileEntity: jecs.Entity)
@@ -154,8 +170,8 @@ function ProjectileController.BreakProjectile(projectileEntity: jecs.Entity)
 	clone.CFrame = model.Sphere.Root.CFrame
 	clone.Parent = Workspace.Temporal
 
-	clone.Shatter1:Emit(20)
-	clone.Shatter2:Emit(20)
+	clone.Shatter1:Emit(15)
+	clone.Shatter2:Emit(15)
 	clone.SpellBreak:Play()
 
 	destroy(projectileEntity, model)
@@ -170,6 +186,8 @@ end
 RunService.Heartbeat:Connect(function(rawDt: number)
 	local dt = TimeController.GetDeltaTime(rawDt)
 	if dt <= 0.001 then return end
+
+	debug.profilebegin("Projectiles")
 
 	local character = Player.Character
 	local characterPos = if character and character.PrimaryPart then character.PrimaryPart.Position else nil
@@ -216,6 +234,8 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 						continue
 					end
 
+					FloatingNumbersController.Add(currentPos, 1, FloatingNumbersController.ENumberType.DamageEnemy)
+
 					World:set(entity, Components.Health, health - 1)
 
 					World:remove(entity, Tags.Parried)
@@ -260,6 +280,8 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 						ParryController.SuccessfulParry(true)
 						continue
 					end
+
+					FloatingNumbersController.Add(currentPos, 1, FloatingNumbersController.ENumberType.DamageEnemy)
 
 					World:set(entity, Components.Health, health - 1)
 
@@ -334,6 +356,8 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 	for _, bone, cf in World:query(Components.Bone, Components.CFrame, Tags.Projectile) do
 		bone.CFrame = cf
 	end
+
+	debug.profileend()
 end)
 
 return Ignis.Register(ProjectileController)

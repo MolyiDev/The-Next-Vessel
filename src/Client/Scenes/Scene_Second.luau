@@ -1,5 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local BossProjectilesController = require(script.Parent.Parent.Controllers.BossController.BossProjectilesController)
+local BossSpawnController = require(script.Parent.Parent.Controllers.BossController.BossSpawnController)
 local TimeController = require(script.Parent.Parent.Controllers.TimeController)
 local TweensController = require(script.Parent.Parent.Controllers.TweensController)
 local FlamesController = require(script.Parent.Parent.Controllers.FlamesController)
@@ -55,7 +55,7 @@ function Scene_Second.Start()
 		end)
 		:andThen(function()
 			Scene_Second.ShouldRestart = false
-			BossProjectilesController.ShootFirst()
+			BossSpawnController.ProjectilesAtSceneStart(20)
 
 			return Promise.delay(0.2):andThen(function()
 				-- Slow down time and wait for the player to react

@@ -1,4 +1,5 @@
 local CollectionService = game:GetService("CollectionService")
+local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 local SoundsController = require(script.Parent.SoundsController)
@@ -15,6 +16,8 @@ export type Torch = {
 
 local NEAR_LIGHT_BRIGTHNESS = 0.5
 local FAR_LIGHT_BRIGTHNESS = 0.25
+local AMBIENT_OFF = Color3.new()
+local AMBIENT_ON = Color3.fromRGB(200, 136, 120)
 
 local LIGHT_TWEEN_INFO = TweenInfo.new(1, Enum.EasingStyle.Back, Enum.EasingDirection.Out)
 local UNLIGHT_TWEEN_INFO = TweenInfo.new(0.5, Enum.EasingStyle.Back, Enum.EasingDirection.In)
@@ -106,12 +109,16 @@ function TorchesController.Unlight(row: number, time: number?)
 end
 
 function TorchesController.LightAll(deafenSound: boolean?, time: number?)
+	Lighting.Ambient = AMBIENT_ON
+
 	for i = 1, TorchesController.ROWS do
 		TorchesController.Light(i, time, deafenSound)
 	end
 end
 
 function TorchesController.UnlightAll(time: number?)
+	Lighting.Ambient = AMBIENT_OFF
+
 	for i = 1, TorchesController.ROWS do
 		TorchesController.Unlight(i, time)
 	end
@@ -137,6 +144,10 @@ function TorchesController.LightAllTorchesInSequence(betweenSeconds: number)
 				TorchesController.Light(i)
 				task.wait(betweenSeconds)
 			end
+
+			TweenService:Create(Lighting, LIGHT_TWEEN_INFO, {
+				Ambient = AMBIENT_ON,
+			}):Play()
 
 			resolve()
 		end)

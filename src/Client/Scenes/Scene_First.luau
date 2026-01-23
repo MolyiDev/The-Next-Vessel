@@ -1,4 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterPlayer = game:GetService("StarterPlayer")
+local HotbarController = require(StarterPlayer.StarterPlayerScripts.Client.Controllers.HotbarController)
 local TweensController = require(script.Parent.Parent.Controllers.TweensController)
 local ColliderControler = require(script.Parent.Parent.Controllers.ColliderControler)
 local UpgradesController = require(script.Parent.Parent.Controllers.UpgradesController)
@@ -9,7 +11,7 @@ local HealthController = require(script.Parent.Parent.Controllers.HealthControll
 local TorchesController = require(script.Parent.Parent.Controllers.TorchesController)
 local TeleportController = require(script.Parent.Parent.Controllers.TeleportController)
 local TridentController = require(script.Parent.Parent.Controllers.BossController.TridentController)
-local BossProjectilesController = require(script.Parent.Parent.Controllers.BossController.BossProjectilesController)
+local BossSpawnController = require(script.Parent.Parent.Controllers.BossController.BossSpawnController)
 local Promise = require(ReplicatedStorage.Shared.Utils.Promise)
 local ECharacters = require(ReplicatedStorage.Types.Enums.ECharacters)
 local EDialogue = require(ReplicatedStorage.Types.Enums.EDialogue)
@@ -38,6 +40,7 @@ end
 
 function Scene_First.Start()
 	HealthController.Revive()
+	HotbarController.Appear()
 
 	Scene_First.IsActive = true
 	Scene_First.ShouldRestart = true
@@ -66,7 +69,7 @@ function Scene_First.Start()
 		end)
 		:andThen(function()
 			Scene_First.ShouldRestart = false
-			BossProjectilesController.ShootFirst(20)
+			BossSpawnController.ProjectilesAtSceneStart(20)
 			return Promise.fromEvent(HealthController.OnDead :: any)
 		end)
 		:andThen(function()
@@ -132,6 +135,7 @@ function Scene_First.Stop()
 	TorchesController.UnlightAll(0)
 	FlamesController.Dissapear()
 	TridentController.Reset()
+	HotbarController.Disappear()
 
 	if Scene_First.SelectedUpgrade then
 		UpgradesController.RemoveUpgrade(Scene_First.SelectedUpgrade)

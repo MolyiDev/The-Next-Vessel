@@ -13,6 +13,10 @@
                 "$className": "Folder",
                 "$ignoreUnknownInstances": true
             },
+            "Spirits": {
+                "$className": "Folder",
+                "$ignoreUnknownInstances": true
+            },
             "Debris": {
                 "$className": "Folder",
                 "$ignoreUnknownInstances": true

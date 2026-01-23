@@ -1,8 +1,10 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterPlayer = game:GetService("StarterPlayer")
+local HotbarController = require(StarterPlayer.StarterPlayerScripts.Client.Controllers.HotbarController)
 local Signal = require(ReplicatedStorage.Packages.Signal)
-local BossProjectilesController = require(script.Parent.Parent.Controllers.BossController.BossProjectilesController)
+local BossSpawnController = require(script.Parent.Parent.Controllers.BossController.BossSpawnController)
 local BossController = require(script.Parent.Parent.Controllers.BossController)
 local TweensController = require(script.Parent.Parent.Controllers.TweensController)
 local FlamesController = require(script.Parent.Parent.Controllers.FlamesController)
@@ -45,6 +47,7 @@ end
 
 function Scene_Third.Start()
 	HealthController.Revive()
+	HotbarController.Appear()
 
 	Scene_Third.IsActive = true
 	Scene_Third.ShouldRestart = true
@@ -74,7 +77,7 @@ function Scene_Third.Start()
 			Scene_Third.ShouldRestart = false
 
 			TweensController.SetImmobile(false)
-			BossProjectilesController.ShootFirst(20)
+			BossSpawnController.ProjectilesAtSceneStart(20)
 
 			return Promise.new(function(resolve, _, onCancel)
 				local bossDeadConnection: Signal.Connection?
@@ -126,7 +129,7 @@ function Scene_Third.Start()
 						if not Character then continue end
 
 						-- Keeping your original homing shot logic if intended
-						if Character and Character.PrimaryPart then BossProjectilesController.ShootFirst(10, 0.6) end
+						if Character and Character.PrimaryPart then BossSpawnController.EnemiesRadial(10, 1) end
 					end
 				end)
 
@@ -202,6 +205,7 @@ function Scene_Third.Stop()
 	DoorsController.Close(0)
 	TorchesController.UnlightAll(0)
 	FlamesController.Dissapear()
+	HotbarController.Disappear()
 	Scene_Third.Corruption = math.min(Scene_Third.Corruption + 1, 5)
 
 	if Scene_Third.SelectedUpgrade then

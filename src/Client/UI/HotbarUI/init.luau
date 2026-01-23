@@ -6,6 +6,8 @@ export type HotbarUIReturn = {
 	UI: any,
 	SetMaxHealth: (newMax: number) -> (),
 	SetCurrentHealth: (newHealth: number) -> (),
+	Appear: () -> (),
+	Disappear: () -> (),
 	AddAbility: () -> (),
 }
 
@@ -13,6 +15,9 @@ local ANIM_DELAY = 0.25
 local TWEEN_INFO = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local create = Fluid.create
+local source = Fluid.source
+local derive = Fluid.derive
+local spring = Fluid.spring
 
 local function Ability()
 	return create("Frame")({
@@ -78,6 +83,13 @@ local function Ability()
 end
 
 return function(): HotbarUIReturn
+	local transparencyTarget = source(1)
+	local transparency = spring(transparencyTarget, 10, 0.8)
+	local strokeTransparency = derive(function()
+		local t = transparency()
+		return math.min(1, t / 0.85)
+	end)
+
 	-- State Variables
 	local currentHealthVal = 100
 	local maxHealthVal = 100
@@ -91,6 +103,7 @@ return function(): HotbarUIReturn
 	local damageBar = create("Frame")({
 		Name = "DamageBar",
 		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundTransparency = transparency,
 		BorderSizePixel = 0,
 		Size = UDim2.fromScale(1, 1),
 		ZIndex = 1, -- Bottom layer (White catch-up)
@@ -99,6 +112,7 @@ return function(): HotbarUIReturn
 	local healingBar = create("Frame")({
 		Name = "HealingBar",
 		BackgroundColor3 = Color3.fromRGB(90, 255, 100),
+		BackgroundTransparency = transparency,
 		BorderSizePixel = 0,
 		Size = UDim2.fromScale(1, 1),
 		ZIndex = 2, -- Middle layer (Green prediction)
@@ -107,6 +121,7 @@ return function(): HotbarUIReturn
 	local mainBar = create("Frame")({
 		Name = "MainBar",
 		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundTransparency = transparency,
 		BorderSizePixel = 0,
 		Size = UDim2.fromScale(1, 1),
 		ZIndex = 3, -- Top layer (Red actual health)
@@ -128,11 +143,13 @@ return function(): HotbarUIReturn
 		Text = "100 / 100",
 		TextColor3 = Color3.new(1, 1, 1),
 		TextScaled = true,
+		TextTransparency = transparency,
 		ZIndex = 5,
 
 		create("UIStroke")({
 			StrokeSizingMode = Enum.StrokeSizingMode.ScaledSize,
 			Thickness = 0.08,
+			Transparency = strokeTransparency,
 		}),
 	})
 
@@ -153,7 +170,7 @@ return function(): HotbarUIReturn
 			Name = "Container",
 			AnchorPoint = Vector2.new(0.5, 1),
 			BackgroundTransparency = 1,
-			Position = UDim2.fromScale(0.5, 0.965),
+			Position = UDim2.fromScale(0.5, 0.99),
 			Size = UDim2.fromScale(0.375, 0.225),
 
 			create("UIListLayout")({
@@ -166,6 +183,7 @@ return function(): HotbarUIReturn
 			create("Frame")({
 				Name = "HealthBarContainer",
 				BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+				BackgroundTransparency = transparency,
 				BorderSizePixel = 0,
 				LayoutOrder = 1,
 				Size = UDim2.fromScale(1, 0.175),
@@ -174,6 +192,7 @@ return function(): HotbarUIReturn
 				create("UIStroke")({
 					LineJoinMode = Enum.LineJoinMode.Bevel,
 					StrokeSizingMode = Enum.StrokeSizingMode.ScaledSize,
+					Transparency = strokeTransparency,
 					Thickness = 0.1,
 				}),
 
@@ -246,6 +265,13 @@ return function(): HotbarUIReturn
 					healingTween:Play()
 				end)
 			end
+		end,
+
+		Appear = function()
+			transparencyTarget(0)
+		end,
+		Disappear = function()
+			transparencyTarget(1)
 		end,
 
 		AddAbility = function() end,

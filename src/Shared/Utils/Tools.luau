@@ -1,4 +1,5 @@
 local Tools = {}
+Tools.FONT_SILKSCREEN_BOLD = Font.new("rbxassetid://12187371840", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
 
 function Tools.WorldMovingDirection(direction: Vector3)
 	if direction == Vector3.zero then return direction end
@@ -24,6 +25,16 @@ end
 
 function Tools.LightenColor(color: Color3, factor: number): Color3
 	return color:Lerp(Color3.new(1, 1, 1), factor)
+end
+
+function Tools.CreateGenericScreenGui(name: string)
+	local screenGui = Instance.new("ScreenGui")
+	screenGui.ClipToDeviceSafeArea = false
+	screenGui.ScreenInsets = Enum.ScreenInsets.None
+	screenGui.IgnoreGuiInset = true
+	screenGui.ResetOnSpawn = false
+	screenGui.Name = name
+	return screenGui
 end
 
 return Tools

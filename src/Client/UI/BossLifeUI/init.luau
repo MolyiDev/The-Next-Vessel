@@ -6,14 +6,26 @@ export type BossLifeUIReturn = {
 	UI: any,
 	SetMaxHealth: (newMax: number) -> (),
 	SetCurrentHealth: (newHealth: number) -> (),
+	Appear: () -> (),
+	Disappear: () -> (),
 }
 
 local ANIM_DELAY = 0.25
 local TWEEN_INFO = TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 
 local create = Fluid.create
+local source = Fluid.source
+local derive = Fluid.derive
+local spring = Fluid.spring
 
 return function(): BossLifeUIReturn
+	local transparencyTarget = source(1)
+	local transparency = spring(transparencyTarget, 10, 0.8)
+	local strokeTransparency = derive(function()
+		local t = transparency()
+		return math.min(1, t / 0.85)
+	end)
+
 	local currentHealthVal = 100
 	local maxHealthVal = 100
 
@@ -24,6 +36,7 @@ return function(): BossLifeUIReturn
 	local damageBar = create("Frame")({
 		Name = "DamageBar",
 		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundTransparency = transparency,
 		BorderSizePixel = 0,
 		Size = UDim2.fromScale(1, 1),
 		ZIndex = 1,
@@ -32,6 +45,7 @@ return function(): BossLifeUIReturn
 	local healingBar = create("Frame")({
 		Name = "HealingBar",
 		BackgroundColor3 = Color3.fromRGB(90, 255, 100),
+		BackgroundTransparency = transparency,
 		BorderSizePixel = 0,
 		Size = UDim2.fromScale(1, 1),
 		ZIndex = 2,
@@ -40,6 +54,7 @@ return function(): BossLifeUIReturn
 	local mainBar = create("Frame")({
 		Name = "MainBar",
 		BackgroundColor3 = Color3.new(1, 1, 1),
+		BackgroundTransparency = transparency,
 		BorderSizePixel = 0,
 		Size = UDim2.fromScale(1, 1),
 		ZIndex = 3,
@@ -61,11 +76,13 @@ return function(): BossLifeUIReturn
 		Text = "100 / 100",
 		TextColor3 = Color3.new(1, 1, 1),
 		TextScaled = true,
+		TextTransparency = transparency,
 		ZIndex = 5,
 
 		create("UIStroke")({
 			StrokeSizingMode = Enum.StrokeSizingMode.ScaledSize,
 			Thickness = 0.08,
+			Transparency = strokeTransparency,
 		}),
 	})
 
@@ -86,12 +103,13 @@ return function(): BossLifeUIReturn
 			Name = "Container",
 			AnchorPoint = Vector2.new(0.5, 0),
 			BackgroundTransparency = 1,
-			Position = UDim2.fromScale(0.5, 0.035),
+			Position = UDim2.fromScale(0.5, 0.01),
 			Size = UDim2.fromScale(0.6, 0.225),
 
 			create("Frame")({
 				Name = "HealthBarContainer",
 				BackgroundColor3 = Color3.fromRGB(20, 20, 20),
+				BackgroundTransparency = transparency,
 				BorderSizePixel = 0,
 				LayoutOrder = 1,
 				Size = UDim2.fromScale(1, 0.175),
@@ -100,6 +118,7 @@ return function(): BossLifeUIReturn
 				create("UIStroke")({
 					LineJoinMode = Enum.LineJoinMode.Bevel,
 					StrokeSizingMode = Enum.StrokeSizingMode.ScaledSize,
+					Transparency = strokeTransparency,
 					Thickness = 0.1,
 				}),
 
@@ -156,6 +175,13 @@ return function(): BossLifeUIReturn
 					healingTween:Play()
 				end)
 			end
+		end,
+
+		Appear = function()
+			transparencyTarget(0)
+		end,
+		Disappear = function()
+			transparencyTarget(1)
 		end,
 	}
 end

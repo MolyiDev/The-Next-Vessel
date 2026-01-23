@@ -1,12 +1,13 @@
 local Players = game:GetService("Players")
 local ProjectileController = require(script.Parent.Parent.ProjectileController)
+local EnemiesController = require(script.Parent.Parent.EnemiesController)
 local BossController = require(script.Parent)
 
 local Player = Players.LocalPlayer
 
-local BossProjectilesController = {}
+local BossSpawnController = {}
 
-function BossProjectilesController.ShootFirst(damage: number, speedMultiplier: number?)
+function BossSpawnController.ProjectilesAtSceneStart(damage: number, speedMultiplier: number?)
 	speedMultiplier = speedMultiplier or 1
 	local bossCf = BossController.GetCFrame()
 	local bossPosition = bossCf.Position - bossCf.LookVector
@@ -66,4 +67,29 @@ function BossProjectilesController.ShootFirst(damage: number, speedMultiplier: n
 	)
 end
 
-return BossProjectilesController
+function BossSpawnController.EnemiesRadial(damage: number, health: number, speedMultiplier: number?)
+	speedMultiplier = speedMultiplier or 1
+	local bossCf = BossController.GetCFrame()
+	local bossPosition = bossCf.Position - bossCf.LookVector
+	bossCf -= bossCf.LookVector
+	local character = Player.Character
+
+	if not character then return end
+
+	-- left
+	EnemiesController.SpawnEnemy(bossPosition, bossPosition - bossCf.RightVector, 15, 2.5, damage, health)
+
+	-- right
+	EnemiesController.SpawnEnemy(bossPosition, bossPosition + bossCf.RightVector, 15, 2.5, damage, health)
+
+	-- up
+	EnemiesController.SpawnEnemy(bossPosition, bossPosition + bossCf.UpVector, 15, 2.5, damage, health)
+
+	-- up left
+	EnemiesController.SpawnEnemy(bossPosition, bossPosition + bossCf.UpVector, 15, 2.5, damage, health)
+
+	-- up right
+	EnemiesController.SpawnEnemy(bossPosition, bossPosition + bossCf.UpVector, 15, 2.5, damage, health)
+end
+
+return BossSpawnController

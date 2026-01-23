@@ -18,8 +18,19 @@ local Components = {
 	Speed = jecs.component() :: jecs.Id<number>,
 	Radius = jecs.component() :: jecs.Id<number>,
 	Bone = jecs.component() :: jecs.Id<Bone>,
+	Attachment = jecs.component() :: jecs.Id<Attachment>,
 	Health = jecs.component() :: jecs.Id<number>,
 	Damage = jecs.component() :: jecs.Id<number>,
+
+	-- Damage Numbers
+	TextLabel = jecs.component() :: jecs.Id<TextLabel>,
+	WorldPos = jecs.component() :: jecs.Id<Vector3>,
+	Velocity = jecs.component() :: jecs.Id<number>,
+	LifeTime = jecs.component() :: jecs.Id<number>,
+	MaxLife = jecs.component() :: jecs.Id<number>,
+
+	-- Target
+	ImageLabel = jecs.component() :: jecs.Id<ImageLabel>,
 
 	-- Cleanup
 	Cleanup = jecs.component() :: jecs.Id<(entity: jecs.Entity) -> ()>,
