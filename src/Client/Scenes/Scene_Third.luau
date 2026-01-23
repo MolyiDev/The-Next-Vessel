@@ -1,10 +1,10 @@
 local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local StarterPlayer = game:GetService("StarterPlayer")
-local HotbarController = require(StarterPlayer.StarterPlayerScripts.Client.Controllers.HotbarController)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local HotbarController = require(script.Parent.Parent.Controllers.HotbarController)
 local BossSpawnController = require(script.Parent.Parent.Controllers.BossController.BossSpawnController)
+local BossLifebarController = require(script.Parent.Parent.Controllers.BossController.BossLifebarController)
 local BossController = require(script.Parent.Parent.Controllers.BossController)
 local TweensController = require(script.Parent.Parent.Controllers.TweensController)
 local FlamesController = require(script.Parent.Parent.Controllers.FlamesController)
@@ -48,6 +48,7 @@ end
 function Scene_Third.Start()
 	HealthController.Revive()
 	HotbarController.Appear()
+	BossLifebarController.Appear()
 
 	Scene_Third.IsActive = true
 	Scene_Third.ShouldRestart = true
@@ -207,6 +208,7 @@ function Scene_Third.Stop()
 	TorchesController.UnlightAll(0)
 	FlamesController.Dissapear()
 	HotbarController.Disappear()
+	BossLifebarController.Disappear()
 	Scene_Third.Corruption = math.min(Scene_Third.Corruption + 1, 5)
 
 	if Scene_Third.SelectedUpgrade then

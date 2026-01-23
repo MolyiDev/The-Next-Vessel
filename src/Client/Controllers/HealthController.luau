@@ -28,12 +28,15 @@ end
 function HealthController.SetHealth(value: number)
 	local newHealth = math.clamp(value, 0, MaxHealth)
 
+	print("setHealth", 1)
 	if newHealth == Health then return end
 
 	local oldHealth = Health
 	local diff = newHealth - oldHealth
 
 	Health = newHealth
+
+	print("setHealth", 2, oldHealth, newHealth, diff)
 
 	if newHealth <= 0 then
 		if not IsDead then

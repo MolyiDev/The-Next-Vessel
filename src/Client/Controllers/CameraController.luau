@@ -178,7 +178,6 @@ local function UpdateCamera(rawDt: number)
 
 	local velocity = HumanoidRootPart.AssemblyLinearVelocity
 	local speed = Vector3.new(velocity.x, 0, velocity.z).Magnitude
-	print(velocity, speed)
 
 	local freq = 0
 	local amp = 0

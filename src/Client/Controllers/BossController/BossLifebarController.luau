@@ -1,8 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
-local FloatingNumbersController =
-	require(StarterPlayer.StarterPlayerScripts.Client.Controllers.FloatingNumbersController)
+local FloatingNumbersController = require(script.Parent.Parent.FloatingNumbersController)
 local BossLifeUI = require(StarterPlayer.StarterPlayerScripts.Client.UI.BossLifeUI)
 local BossController = require(script.Parent)
 local Fluid = require(ReplicatedStorage.Shared.Utils.Fluid)

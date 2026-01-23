@@ -62,9 +62,12 @@ end
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp or input.UserInputType ~= Enum.UserInputType.MouseButton2 then return end
 	if not UpgradesController.HasUpgrade(EUpgrades.Parry) then return end
+
 	local timeNow = time()
 
 	if (timeNow - ParryController.ReleaseTime) < PARRY_COOLDOWN then return end
+	if (timeNow - ParryController.PressTime) < (PARRY_DURATION + PARRY_COOLDOWN) then return end
+
 	ParryController.PressTime = timeNow
 	if ChargeTask then task.cancel(ChargeTask) end
 

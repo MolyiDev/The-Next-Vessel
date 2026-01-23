@@ -161,6 +161,7 @@ function ProjectileController.AddProjectileMissile(
 		model.Sphere.Root.Trail.Enabled = true
 	end)
 
+	model.Sphere.Root.Trail.Enabled = true
 	ProjectileController.ProjectileCount += 1
 
 	jecs.bulk_insert(World, projectileEntity, {

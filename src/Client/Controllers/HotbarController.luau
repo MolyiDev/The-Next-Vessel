@@ -26,6 +26,7 @@ end
 
 HealthController.OnDamaged:Connect(function(_, new)
 	-- TODO: Make a sound.
+	print("damage", new)
 	UI.SetCurrentHealth(new)
 end)
 

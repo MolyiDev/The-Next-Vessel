@@ -3,6 +3,11 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local jecs = require(ReplicatedStorage.Packages.jecs)
+local Components = require(ReplicatedStorage.Shared.ECS.Components)
+local WorldRef = require(ReplicatedStorage.Shared.ECS.References.WorldRef)
+local Tags = require(ReplicatedStorage.Shared.ECS.Tags)
+local World = require(ReplicatedStorage.Shared.ECS.Worlds.World)
 local TCharacter = require(ReplicatedStorage.Types.TCharacter)
 
 local FlyIdleAnim = ReplicatedStorage:WaitForChild("Animations"):WaitForChild("FlyIdle") :: Animation
@@ -12,7 +17,10 @@ local Humanoid = BossR6 and BossR6:WaitForChild("Humanoid") :: Humanoid
 local HumanoidRootPart = BossR6 and BossR6:WaitForChild("HumanoidRootPart") :: BasePart
 local Animator = Humanoid and Humanoid:WaitForChild("Animator") :: Animator
 
-local DEFAULT_POSITION = (BossR6.PrimaryPart :: any).CFrame
+local BossEntity = WorldRef:EntityRef(BossR6)
+jecs.bulk_insert(World, BossEntity, { Components.CFrame, Tags.Enemy }, { HumanoidRootPart.CFrame })
+
+local DEFAULT_POSITION = HumanoidRootPart.CFrame
 
 local Player = Players.LocalPlayer
 
