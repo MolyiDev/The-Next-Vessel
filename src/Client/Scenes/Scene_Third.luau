@@ -2,6 +2,7 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local TimeController = require(script.Parent.Parent.Controllers.TimeController)
 local EnemiesController = require(script.Parent.Parent.Controllers.EnemiesController)
 local HotbarController = require(script.Parent.Parent.Controllers.HotbarController)
 local BossSpawnController = require(script.Parent.Parent.Controllers.BossController.BossSpawnController)
@@ -79,6 +80,7 @@ function Scene_Third.Start()
 		:andThen(function()
 			Scene_Third.ShouldRestart = false
 
+			TimeController.Play()
 			TweensController.SetImmobile(false)
 			BossSpawnController.ProjectilesAtSceneStart(100)
 

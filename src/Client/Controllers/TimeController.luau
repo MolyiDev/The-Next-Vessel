@@ -1,9 +1,12 @@
+local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local StarterPlayer = game:GetService("StarterPlayer")
 local Workspace = game:GetService("Workspace")
-
+local TimerUI = require(StarterPlayer.StarterPlayerScripts.Client.UI.TimerUI)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local Fluid = require(ReplicatedStorage.Shared.Utils.Fluid)
 local Tools = require(ReplicatedStorage.Shared.Utils.Tools)
 
 local DEFAULT_GRAVITY = 196.2
@@ -13,39 +16,66 @@ TimeController.TimeScaleChanged = Signal.new()
 TimeController.FIXED_DELTA_TIME = 1 / 60
 TimeController.TimeScale = 1
 
+TimeController.Timer = 0
+TimeController.Checkpoint = 0
+TimeController.IsBossVulnerable = false
+TimeController.Paused = true
+
 local targetTimeScale = 1
 local startScale = 1
 local tweenDuration = 0
 local tweenElapsed = 0
 local isTweening = false
 
+local UI: TimerUI.TimerUIReturn
+
+Fluid.mount(function()
+	UI = TimerUI()
+	return UI.UI
+end, Players.LocalPlayer:WaitForChild("PlayerGui"))
+
 local function setTimeScale(value: number)
 	TimeController.TimeScale = value
-
-	-- Adjust Physics Gravity: g' = g * s^2
-	-- This keeps the jump height constant while extending the duration.
-	-- If we didn't do this, lower gravity would result in higher jumps if velocity wasn't scaled.
 	Workspace.Gravity = DEFAULT_GRAVITY * (value * value)
-
 	TimeController.TimeScaleChanged:Fire(value)
 end
 
 RunService.Heartbeat:Connect(function(dt)
-	if not isTweening then return end
+	if isTweening then
+		tweenElapsed += dt
+		local alpha = math.clamp(tweenElapsed / tweenDuration, 0, 1)
+		local current = Tools.Lerp(startScale, targetTimeScale, alpha)
+		setTimeScale(current)
+		if alpha >= 1 then isTweening = false end
+	end
 
-	tweenElapsed += dt
-	local alpha = math.clamp(tweenElapsed / tweenDuration, 0, 1)
+	if TimeController.Paused then return end
 
-	-- We use TweenService's GetValue for the easing math, or a simple lerp if preferred.
-	-- Since we want to avoid TweenService instances, we can simple Lerp or use a helper.
-	-- For simplicity in this loop, we'll use linear or simple curve if Tools has it,
-	-- but here acts as a standard Lerp for robustness.
+	local delta = dt * TimeController.TimeScale
+	TimeController.Timer += delta
 
-	local current = Tools.Lerp(startScale, targetTimeScale, alpha)
-	setTimeScale(current)
+	local currentMinute = math.floor(TimeController.Timer / 60)
+	if currentMinute > math.floor(TimeController.Checkpoint / 60) then
+		TimeController.Checkpoint = currentMinute * 60
+	end
 
-	if alpha >= 1 then isTweening = false end
+	TimeController.IsBossVulnerable = TimeController.Timer >= 300
+	UI.SetTime(TimeController.Timer)
 end)
+
+function TimeController.Play()
+	TimeController.Paused = false
+end
+
+function TimeController.Pause()
+	TimeController.Paused = true
+end
+
+function TimeController.Reset()
+	TimeController.Timer = TimeController.Checkpoint
+	UI.SetTime(TimeController.Checkpoint)
+	TimeController.Paused = true
+end
 
 function TimeController.TweenTimeScale(target: number, duration: number?)
 	duration = duration or 0
@@ -58,7 +88,7 @@ function TimeController.TweenTimeScale(target: number, duration: number?)
 
 	startScale = TimeController.TimeScale
 	targetTimeScale = target
-	tweenDuration = duration
+	tweenDuration = duration :: any
 	tweenElapsed = 0
 	isTweening = true
 end

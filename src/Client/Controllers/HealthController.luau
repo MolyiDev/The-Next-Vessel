@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local SoundsController = require(script.Parent.SoundsController)
+local TimeController = require(script.Parent.TimeController)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local ESounds = require(ReplicatedStorage.Types.Enums.ESounds)
 
@@ -40,6 +41,7 @@ function HealthController.SetHealth(value: number)
 	if newHealth <= 0 then
 		if not IsDead then
 			IsDead = true
+			TimeController.Pause()
 			HealthController.OnDead:Fire()
 		end
 	end

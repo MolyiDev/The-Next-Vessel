@@ -15,6 +15,10 @@ function Tools.WorldMovingDirection(direction: Vector3)
 	return Vector3.new(newX, 0, newZ)
 end
 
+function Tools.LerpColor(c1: Color3, c2: Color3, alpha: number): Color3
+	return Color3.new(c1.R + (c2.R - c1.R) * alpha, c1.G + (c2.G - c1.G) * alpha, c1.B + (c2.B - c1.B) * alpha)
+end
+
 function Tools.Lerp(a: number, b: number, t: number): number
 	return a + (b - a) * t
 end
