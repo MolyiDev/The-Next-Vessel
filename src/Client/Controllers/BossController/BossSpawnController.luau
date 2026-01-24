@@ -19,9 +19,9 @@ function BossSpawnController.ProjectilesAtSceneStart(damage: number, speedMultip
 	-- left
 	ProjectileController.AddProjectileMissile(
 		bossPosition,
-		bossPosition - bossCf.RightVector,
+		((bossPosition - bossCf.RightVector) - bossPosition).Unit,
 		character.PrimaryPart,
-		120 * speedMultiplier,
+		120 * speedMultiplier :: any,
 		2.5,
 		ProjectileController.ESender.Enemy,
 		damage
@@ -30,9 +30,9 @@ function BossSpawnController.ProjectilesAtSceneStart(damage: number, speedMultip
 	-- right
 	ProjectileController.AddProjectileMissile(
 		bossPosition,
-		bossPosition + bossCf.RightVector,
+		((bossPosition + bossCf.RightVector) - bossPosition).Unit,
 		character.PrimaryPart,
-		120 * speedMultiplier,
+		120 * speedMultiplier :: any,
 		2.5,
 		ProjectileController.ESender.Enemy,
 		damage
@@ -41,9 +41,9 @@ function BossSpawnController.ProjectilesAtSceneStart(damage: number, speedMultip
 	-- up
 	ProjectileController.AddProjectileMissile(
 		bossPosition,
-		bossPosition + bossCf.UpVector,
+		((bossPosition + bossCf.UpVector) - bossPosition).Unit,
 		character.PrimaryPart,
-		120 * speedMultiplier,
+		120 * speedMultiplier :: any,
 		2.5,
 		ProjectileController.ESender.Enemy,
 		damage
@@ -52,9 +52,9 @@ function BossSpawnController.ProjectilesAtSceneStart(damage: number, speedMultip
 	-- up left
 	ProjectileController.AddProjectileMissile(
 		bossPosition,
-		bossPosition + (bossCf.UpVector - bossCf.RightVector).Unit,
+		((bossPosition + (bossCf.UpVector - bossCf.RightVector).Unit) - bossPosition).Unit,
 		character.PrimaryPart,
-		120 * speedMultiplier,
+		120 * speedMultiplier :: any,
 		2.5,
 		ProjectileController.ESender.Enemy,
 		damage
@@ -63,9 +63,9 @@ function BossSpawnController.ProjectilesAtSceneStart(damage: number, speedMultip
 	-- up right
 	ProjectileController.AddProjectileMissile(
 		bossPosition,
-		bossPosition + (bossCf.UpVector + bossCf.RightVector).Unit,
+		((bossPosition + (bossCf.UpVector + bossCf.RightVector).Unit) - bossPosition).Unit,
 		character.PrimaryPart,
-		120 * speedMultiplier,
+		120 * speedMultiplier :: any,
 		2.5,
 		ProjectileController.ESender.Enemy,
 		damage
@@ -82,19 +82,59 @@ function BossSpawnController.EnemiesRadial(damage: number, health: number, speed
 	if not character then return end
 
 	-- left
-	EnemiesController.SpawnEnemy(bossPosition, bossPosition - bossCf.RightVector, 15, 2.5, damage, health)
+	EnemiesController.SpawnEnemy(
+		bossPosition,
+		bossPosition - bossCf.RightVector,
+		15,
+		2.5,
+		math.random(0, 3),
+		damage,
+		health
+	)
 
 	-- right
-	EnemiesController.SpawnEnemy(bossPosition, bossPosition + bossCf.RightVector, 15, 2.5, damage, health)
+	EnemiesController.SpawnEnemy(
+		bossPosition,
+		bossPosition + bossCf.RightVector,
+		15,
+		2.5,
+		math.random(0, 3),
+		damage,
+		health
+	)
 
 	-- up
-	EnemiesController.SpawnEnemy(bossPosition, bossPosition + bossCf.UpVector, 15, 2.5, damage, health)
+	EnemiesController.SpawnEnemy(
+		bossPosition,
+		bossPosition + bossCf.UpVector,
+		15,
+		2.5,
+		math.random(0, 3),
+		damage,
+		health
+	)
 
 	-- up left
-	EnemiesController.SpawnEnemy(bossPosition, bossPosition + bossCf.UpVector, 15, 2.5, damage, health)
+	EnemiesController.SpawnEnemy(
+		bossPosition,
+		bossPosition + bossCf.UpVector,
+		15,
+		2.5,
+		math.random(0, 3),
+		damage,
+		health
+	)
 
 	-- up right
-	EnemiesController.SpawnEnemy(bossPosition, bossPosition + bossCf.UpVector, 15, 2.5, damage, health)
+	EnemiesController.SpawnEnemy(
+		bossPosition,
+		bossPosition + bossCf.UpVector,
+		15,
+		2.5,
+		math.random(0, 3),
+		damage,
+		health
+	)
 end
 
 return BossSpawnController

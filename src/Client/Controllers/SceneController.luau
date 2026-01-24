@@ -29,7 +29,8 @@ local Player = Players.LocalPlayer
 local ActiveSceneModule: TScene.TScene?
 local InputBeganConnection: RBXScriptConnection?
 
-local function startCharacter()
+local function startCharacter(character: TCharacter.TCharacter)
+	character.Humanoid.AutoRotate = true
 	MouseController.HideMouse()
 	CameraController.DisableCinematicCamera()
 	TweensController.SetImmobile(false)
@@ -80,7 +81,7 @@ end
 
 SceneController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 	if SceneController.IsGameStarted() then
-		startCharacter()
+		startCharacter(character)
 
 		if ActiveSceneModule and ActiveSceneModule.CharacterAdded then ActiveSceneModule.CharacterAdded(character) end
 		return
@@ -103,7 +104,7 @@ SceneController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 			InputBeganConnection = nil
 		end
 
-		startCharacter()
+		startCharacter(character)
 		SceneController.OnGameStarted:Fire()
 
 		-- Test
@@ -140,7 +141,7 @@ HealthController.OnRevived:Connect(function()
 	end
 
 	CameraController.DisableCinematicCamera()
-	startCharacter()
+	startCharacter(character)
 end)
 
 return Ignis.Register(SceneController)

@@ -80,7 +80,7 @@ function Scene_Third.Start()
 			Scene_Third.ShouldRestart = false
 
 			TweensController.SetImmobile(false)
-			BossSpawnController.ProjectilesAtSceneStart(20)
+			BossSpawnController.ProjectilesAtSceneStart(100)
 
 			return Promise.new(function(resolve, _, onCancel)
 				local bossDeadConnection: Signal.Connection?
@@ -118,7 +118,7 @@ function Scene_Third.Start()
 
 							ProjectileController.AddProjectile(
 								SpawnLowPos,
-								SpawnLowPos + Direction,
+								((SpawnLowPos + Direction) - SpawnLowPos).Unit,
 								80,
 								2.5,
 								ProjectileController.ESender.Enemy,

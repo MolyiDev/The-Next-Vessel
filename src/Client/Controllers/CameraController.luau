@@ -177,10 +177,12 @@ CameraController.OnCharacterAdded = function(character: TCharacter.TCharacter, c
 		Camera.CFrame = Camera.CFrame * shakeCF * CAMERA_OFFSET
 		local _, y, _ = Camera.CFrame:ToOrientation()
 
-		character.HumanoidRootPart.CFrame = character.HumanoidRootPart.CFrame:Lerp(
-			CFrame.new(character.HumanoidRootPart.Position) * CFrame.Angles(0, y, 0),
-			math.clamp(dt * 10, 0, 1)
-		)
+		if Humanoid.AutoRotate then
+			character.HumanoidRootPart.CFrame = character.HumanoidRootPart.CFrame:Lerp(
+				CFrame.new(character.HumanoidRootPart.Position) * CFrame.Angles(0, y, 0),
+				math.clamp(dt * 10, 0, 1)
+			)
+		end
 	end)
 end
 

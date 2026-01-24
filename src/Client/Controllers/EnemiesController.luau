@@ -34,15 +34,30 @@ local WALL_MARGIN = 2
 
 local Player = Players.LocalPlayer
 
-local SpiritModel = ReplicatedStorage:WaitForChild("Effects"):WaitForChild("Spirit") :: Spirit
 local SpiritBreakEffect = ReplicatedStorage:WaitForChild("Effects"):WaitForChild("SpiritBreak") :: SpiritBreak
-local SpiritPool = ObjectPooler.new(SpiritModel, 200, 50, ObjectPooler.ReturnCF, Workspace.Spirits)
+
+local SpiritGreenModel = ReplicatedStorage:WaitForChild("Effects"):WaitForChild("SpiritGreen") :: Spirit
+local SpiritBlueModel = ReplicatedStorage:WaitForChild("Effects"):WaitForChild("SpiritBlue") :: Spirit
+local SpiritYellowModel = ReplicatedStorage:WaitForChild("Effects"):WaitForChild("SpiritYellow") :: Spirit
+local SpiritPurpleModel = ReplicatedStorage:WaitForChild("Effects"):WaitForChild("SpiritPurple") :: Spirit
+
+local SpiritGreenPool = ObjectPooler.new(SpiritGreenModel, 30, 10, ObjectPooler.ReturnCF, Workspace.Spirits)
+local SpiritBluePool = ObjectPooler.new(SpiritBlueModel, 30, 10, ObjectPooler.ReturnCF, Workspace.Spirits)
+local SpiritYellowPool = ObjectPooler.new(SpiritYellowModel, 30, 10, ObjectPooler.ReturnCF, Workspace.Spirits)
+local SpiritPurplePool = ObjectPooler.new(SpiritPurpleModel, 30, 10, ObjectPooler.ReturnCF, Workspace.Spirits)
+
 local ProjectilesZone = CollectionService:GetTagged("ProjectilesZone")[1] :: BasePart
 
 local RayParams = RaycastParams.new()
 RayParams.FilterType = Enum.RaycastFilterType.Exclude
 
 local EnemiesController = {}
+EnemiesController.EEnemyType = {
+	Green = 0, -- Normal
+	Blue = 1, -- Damage and speed increased x2
+	Yellow = 2, -- Health and Damage and speed increased x3
+	Purple = 3, -- Health and Damage and Speed increased x4
+}
 EnemiesController.EnemiesCount = 0
 EnemiesController.SpatialHash = SpatialHash.new()
 
@@ -55,12 +70,32 @@ function EnemiesController.SpawnEnemy(
 	targetPos: Vector3,
 	speed: number,
 	radius: number,
+	type: number,
 	damage: number?,
 	health: number?
 )
 	if EnemiesController.EnemiesCount >= MAX_ENEMIES then return end
 
-	local model = SpiritPool:Get() :: Spirit
+	local model: Spirit
+
+	if type == EnemiesController.EEnemyType.Green then
+		model = SpiritGreenPool:Get()
+	elseif type == EnemiesController.EEnemyType.Blue then
+		model = SpiritBluePool:Get()
+		speed = (speed or 1) * 1.5
+		damage = (damage or 1) * 1.5
+	elseif type == EnemiesController.EEnemyType.Yellow then
+		model = SpiritYellowPool:Get()
+		speed = (speed or 1) * 1.75
+		damage = (damage or 1) * 1.75
+		health = (health or 1) * 2
+	else
+		model = SpiritPurplePool:Get()
+		speed = (speed or 1) * 2
+		damage = (damage or 1) * 2
+		health = (health or 1) * 3
+	end
+
 	local enemyEntity = WorldRef:EntityRef(model)
 	EnemiesController.EnemiesCount += 1
 	EnemiesController.SpatialHash:AddSphere(enemyEntity, initialPos, radius)
@@ -73,6 +108,7 @@ function EnemiesController.SpawnEnemy(
 		Components.Attachment,
 		Components.Health,
 		Components.Damage,
+		Components.Type,
 		Tags.Enemy,
 	}, {
 		CFrame.new(initialPos, targetPos),
@@ -80,15 +116,27 @@ function EnemiesController.SpawnEnemy(
 		speed,
 		radius,
 		model,
-		health or 1,
-		damage or 1,
+		health,
+		damage,
+		type,
 	})
 end
 
 local function destroy(enemyEntity: jecs.Entity, model: Spirit)
+	local type = World:get(enemyEntity, Components.Type)
 	EnemiesController.SpatialHash:Remove(enemyEntity)
 	WorldRef:Nuke(model, enemyEntity)
-	SpiritPool:Return(model)
+
+	if type == EnemiesController.EEnemyType.Green then
+		SpiritGreenPool:Return(model)
+	elseif type == EnemiesController.EEnemyType.Blue then
+		SpiritBluePool:Return(model)
+	elseif type == EnemiesController.EEnemyType.Yellow then
+		SpiritYellowPool:Return(model)
+	else
+		SpiritPurplePool:Return(model)
+	end
+
 	EnemiesController.EnemiesCount -= 1
 end
 

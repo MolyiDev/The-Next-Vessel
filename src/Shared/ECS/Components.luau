@@ -21,6 +21,8 @@ local Components = {
 	Attachment = jecs.component() :: jecs.Id<Attachment>,
 	Health = jecs.component() :: jecs.Id<number>,
 	Damage = jecs.component() :: jecs.Id<number>,
+	Type = jecs.component() :: jecs.Id<number>,
+	Sender = jecs.component() :: jecs.Id<number>,
 
 	-- Damage Numbers
 	TextLabel = jecs.component() :: jecs.Id<TextLabel>,

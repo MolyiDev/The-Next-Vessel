@@ -69,7 +69,7 @@ function Scene_First.Start()
 		end)
 		:andThen(function()
 			Scene_First.ShouldRestart = false
-			BossSpawnController.ProjectilesAtSceneStart(20)
+			BossSpawnController.ProjectilesAtSceneStart(100)
 			return Promise.fromEvent(HealthController.OnDead :: any)
 		end)
 		:andThen(function()

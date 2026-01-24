@@ -55,7 +55,7 @@ function Scene_Second.Start()
 		end)
 		:andThen(function()
 			Scene_Second.ShouldRestart = false
-			BossSpawnController.ProjectilesAtSceneStart(20)
+			BossSpawnController.ProjectilesAtSceneStart(100)
 
 			return Promise.delay(0.2):andThen(function()
 				-- Slow down time and wait for the player to react

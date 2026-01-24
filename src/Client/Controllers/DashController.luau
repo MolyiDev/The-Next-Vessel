@@ -90,21 +90,40 @@ local function getMoveDirection(): Vector3
 	local look = rootCF.LookVector
 	local right = rootCF.RightVector
 
-	if DashController.Direction == EDirections.Front then
+	local direction = Vector3.zero
+
+	if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+		direction += look
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+		direction -= look
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+		direction -= right
+	end
+	if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+		direction += right
+	end
+
+	if direction.Magnitude > 0 then return direction end
+
+	local dashDir = DashController.Direction
+
+	if dashDir == EDirections.Front then
 		return look
-	elseif DashController.Direction == EDirections.FrontLeft then
+	elseif dashDir == EDirections.FrontLeft then
 		return look - right
-	elseif DashController.Direction == EDirections.FrontRight then
+	elseif dashDir == EDirections.FrontRight then
 		return look + right
-	elseif DashController.Direction == EDirections.Back then
+	elseif dashDir == EDirections.Back then
 		return -look
-	elseif DashController.Direction == EDirections.BackLeft then
+	elseif dashDir == EDirections.BackLeft then
 		return -look - right
-	elseif DashController.Direction == EDirections.BackRight then
+	elseif dashDir == EDirections.BackRight then
 		return -look + right
-	elseif DashController.Direction == EDirections.Left then
+	elseif dashDir == EDirections.Left then
 		return -right
-	elseif DashController.Direction == EDirections.Right then
+	elseif dashDir == EDirections.Right then
 		return right
 	end
 
