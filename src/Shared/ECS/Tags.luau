@@ -7,7 +7,6 @@ local Tags = {
 	Character = jecs.tag(),
 	Projectile = jecs.tag(),
 	Enemy = jecs.tag(),
-	Parried = jecs.tag(),
 	SafePlayer = jecs.tag(),
 	SafeEnemy = jecs.tag(),
 }

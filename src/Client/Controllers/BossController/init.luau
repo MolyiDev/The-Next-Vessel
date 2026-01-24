@@ -18,7 +18,12 @@ local HumanoidRootPart = BossR6 and BossR6:WaitForChild("HumanoidRootPart") :: B
 local Animator = Humanoid and Humanoid:WaitForChild("Animator") :: Animator
 
 local BossEntity = WorldRef:EntityRef(BossR6)
-jecs.bulk_insert(World, BossEntity, { Components.CFrame, Tags.Enemy }, { HumanoidRootPart.CFrame })
+jecs.bulk_insert(
+	World,
+	BossEntity,
+	{ Components.CFrame, Components.Model, Tags.Enemy },
+	{ HumanoidRootPart.CFrame, HumanoidRootPart }
+)
 
 local DEFAULT_POSITION = HumanoidRootPart.CFrame
 

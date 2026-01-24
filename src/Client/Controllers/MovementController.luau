@@ -13,8 +13,8 @@ local EMovementJumps = require(ReplicatedStorage.Types.Enums.Movement.EMovementJ
 local EMovementSpeeds = require(ReplicatedStorage.Types.Enums.Movement.EMovementSpeeds)
 local TCharacter = require(ReplicatedStorage.Types.TCharacter)
 
-local FADE_OUT = 0.4
-local FADE_IN = 0.4
+local FADE_OUT = 0.35
+local FADE_IN = 0.35
 local LIMIT = 1.32
 local WALK_ANIM_SPEED = 1
 local RUN_ANIM_SPEED = 1.4
@@ -113,18 +113,18 @@ local function moveDirection()
 	if ShiftTouched and Direction.Z ~= 1 then
 		CurrentBaseSpeed = EMovementSpeeds.Running
 		CurrentBaseJump = EMovementJumps.Running
-		TweensController.SetCameraFov(ECameraFovs.Running, TweenInfo.new(0.25))
-		TweensController.SetSpeed(CurrentBaseSpeed * TimeController.TimeScale, 0.25)
-		TweensController.SetJump(CurrentBaseJump * TimeController.TimeScale, 0.25)
+		TweensController.SetCameraFov(ECameraFovs.Running, TweenInfo.new(0.2))
+		TweensController.SetSpeed(CurrentBaseSpeed * TimeController.TimeScale, 0.2)
+		TweensController.SetJump(CurrentBaseJump * TimeController.TimeScale, 0.2)
 		RunFront:Play(FADE_IN, 1, runAnimSpeed())
 		if PrevAnimation == RunFront then RunFront.TimePosition = getAnimTime() end
 		PrevAnimation = RunFront
 	else
 		CurrentBaseSpeed = EMovementSpeeds.Default
 		CurrentBaseJump = EMovementJumps.Default
-		TweensController.SetCameraFov(ECameraFovs.Default, TweenInfo.new(0.25))
-		TweensController.SetSpeed(CurrentBaseSpeed * TimeController.TimeScale, 0.25)
-		TweensController.SetJump(CurrentBaseJump * TimeController.TimeScale, 0.25)
+		TweensController.SetCameraFov(ECameraFovs.Default, TweenInfo.new(0.2))
+		TweensController.SetSpeed(CurrentBaseSpeed * TimeController.TimeScale, 0.2)
+		TweensController.SetJump(CurrentBaseJump * TimeController.TimeScale, 0.2)
 		local animations = WalkAnimations[Direction]
 		local syncTime = getAnimTime()
 

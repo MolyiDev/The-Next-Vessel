@@ -109,6 +109,37 @@ function TargetController.GetTarget(): (jecs.Entity?, Vector3?)
 	return nil, nil
 end
 
+function TargetController.SwitchToNextTarget(oldTarget: jecs.Entity)
+	if CurrentTargetEntity ~= oldTarget then return end
+
+	local oldCF = World:get(oldTarget, Components.CFrame)
+	local searchPos = if oldCF then oldCF.Position else Camera.CFrame.Position + (Camera.CFrame.LookVector * 10)
+
+	local bestEntity = nil
+	local bestDist = MAX_SELECTION_DIST
+
+	for entity, cf in World:query(Components.CFrame, Tags.Enemy) do
+		if entity == oldTarget then continue end
+
+		local dist = (cf.Position - searchPos).Magnitude
+
+		if dist > bestDist then continue end
+
+		local _, onScreen = Camera:WorldToViewportPoint(cf.Position)
+		if not onScreen then continue end
+
+		bestDist = dist
+		bestEntity = entity
+	end
+
+	if bestEntity then
+		CurrentTargetEntity = bestEntity
+		SelectionStartTime = os.clock()
+	else
+		TargetController.OnTargetDestroyed()
+	end
+end
+
 function TargetController.OnTargetDestroyed()
 	CurrentTargetEntity = nil
 	SelectedReticle.Container.Visible = false

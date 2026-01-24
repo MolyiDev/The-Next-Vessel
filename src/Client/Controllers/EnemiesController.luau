@@ -8,6 +8,7 @@ local DashController = require(script.Parent.DashController)
 local HealthController = require(script.Parent.HealthController)
 local KnockbackController = require(script.Parent.KnockbackController)
 local SoundsController = require(script.Parent.SoundsController)
+local TargetController = require(script.Parent.TargetController)
 local jecs = require(ReplicatedStorage.Packages.jecs)
 local Components = require(ReplicatedStorage.Shared.ECS.Components)
 local WorldRef = require(ReplicatedStorage.Shared.ECS.References.WorldRef)
@@ -178,6 +179,9 @@ function EnemiesController.HitEnemy(entity: jecs.Entity, damage: number)
 	local newHealth = currentHealth - damage
 
 	if newHealth <= 0 then
+		local currentTarget, _ = TargetController.GetTarget()
+		if currentTarget == entity then TargetController.SwitchToNextTarget(entity) end
+
 		EnemiesController.BreakEnemy(entity)
 	else
 		World:set(entity, Components.Health, newHealth)

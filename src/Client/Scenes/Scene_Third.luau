@@ -109,7 +109,7 @@ function Scene_Third.Start()
 					local AngleStep = (math.pi * 2) / DirectionCount
 
 					while true do
-						task.wait(1)
+						task.wait(2)
 
 						-- Loop through the count to calculate each angle
 						for I = 1, DirectionCount do
@@ -128,14 +128,6 @@ function Scene_Third.Start()
 								math.random(0, 6)
 							)
 						end
-
-						task.wait(1)
-
-						local Character = Players.LocalPlayer.Character
-						if not Character then continue end
-
-						-- Keeping your original homing shot logic if intended
-						if Character and Character.PrimaryPart then BossSpawnController.EnemiesRadial(10, 1) end
 					end
 				end)
 

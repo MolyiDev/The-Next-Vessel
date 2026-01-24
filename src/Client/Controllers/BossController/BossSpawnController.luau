@@ -40,13 +40,7 @@ function BossSpawnController.ProjectilesAtSceneStart(damage: number, speedMultip
 	end
 end
 
-function BossSpawnController.EnemiesRadial(
-	damage: number,
-	health: number,
-	speedMultiplier: number?,
-	allowedTypes: { number }?
-)
-	speedMultiplier = speedMultiplier or 1
+function BossSpawnController.EnemiesRadial(damage: number, health: number, allowedTypes: { number }?)
 	local bossCf = BossController.GetCFrame()
 	local bossPosition = bossCf.Position - bossCf.LookVector
 	bossCf -= bossCf.LookVector
@@ -78,34 +72,38 @@ function BossSpawnController.HandleSpawning()
 	local types = { 0 } -- green
 
 	if currentMinute == 0 then
-		-- 00:00 -> 01:00: green, every 10s
-		interval = 10
+		-- 00:00 -> 01:00: green, every 9s
+		interval = 9
 		types = { 0 }
 	elseif currentMinute == 1 then
-		-- 01:00 -> 02:00: green + blue, every 8s
-		interval = 8
+		-- 01:00 -> 02:00: green + blue, every 7s
+		interval = 7
 		types = { 0, 1 }
 	elseif currentMinute == 2 then
-		-- 02:00 -> 03:00: blue + yellow, every 6s
-		interval = 6
+		-- 02:00 -> 03:00: blue + yellow, every 5s
+		interval = 5
 		types = { 1, 2 }
-	elseif currentMinute >= 3 and currentMinute < 5 then
-		-- 03:00 -> 05:00: yellow + purple every 4s
+	elseif currentMinute >= 3 and currentMinute < 4 then
+		-- 03:00 -> 04:00: yellow + purple every 4s
 		interval = 4
 		types = { 2, 3 }
+	elseif currentMinute >= 4 and currentMinute < 5 then
+		-- 04:00 -> 05:00: purple every 4s
+		interval = 4
+		types = { 3 }
 	elseif currentMinute >= 5 then
-		-- 05:00+: purple every 8s
-		interval = 8
+		-- 05:00+: purple every 6s
+		interval = 6
 		types = { 3 }
 	end
 
-	BossSpawnController.EnemiesRadial(15, 30, 1, types)
+	BossSpawnController.EnemiesRadial(10, 1, types)
 
 	nextSpawnTime = TimeController.Timer + interval
 end
 
 RunService.Heartbeat:Connect(function()
-	if TimeController.Timer >= nextSpawnTime then BossSpawnController.HandleSpawning() end
+	if not TimeController.Paused and TimeController.Timer >= nextSpawnTime then BossSpawnController.HandleSpawning() end
 end)
 
 return BossSpawnController

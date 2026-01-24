@@ -135,7 +135,6 @@ local function spawnProjectileInternal(
 
 	components[#components + 1] = safeTag
 
-	-- 4. Finalize
 	root.CFrame = initialCF
 
 	task.defer(function()
@@ -236,7 +235,6 @@ UserInputService.InputBegan:Connect(function(input, gp)
 	local targetEnt, targetPos = TargetController.GetTarget()
 	local targetInstance = nil
 
-	-- Try to find the physical part/attachment to home in on
 	if targetEnt then
 		targetInstance = World:get(targetEnt, Components.Attachment)
 			or World:get(targetEnt, Components.Model)
@@ -244,10 +242,22 @@ UserInputService.InputBegan:Connect(function(input, gp)
 	end
 
 	local startPos = root.Position + root.CFrame.LookVector * 3
+	local speed = 90
+	local radius = 2.5
+	local dmg = 1
+	local health = 1
 
 	if not targetInstance then
 		local dir = Workspace.CurrentCamera.CFrame.LookVector
-		ProjectileController.AddProjectile(startPos, dir, 90, 2.5, ProjectileController.ESender.Player, 20, 1)
+		ProjectileController.AddProjectile(
+			startPos,
+			dir,
+			speed,
+			radius,
+			ProjectileController.ESender.Player,
+			dmg,
+			health
+		)
 
 		return
 	end
@@ -257,11 +267,11 @@ UserInputService.InputBegan:Connect(function(input, gp)
 		startPos,
 		dir,
 		targetInstance :: any,
-		90, -- Speed
-		2.5, -- Radius
+		speed,
+		radius,
 		ProjectileController.ESender.Player,
-		20, -- Damage
-		1 -- Health
+		dmg,
+		health
 	)
 
 	-- SoundsController.PlayCharacter(ESounds.Parry) -- Placeholder sound
@@ -332,6 +342,7 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 						hitEnemy = true
 
 						EnemiesController.HitEnemy(enemyEntity, dmg)
+
 						FloatingNumbersController.Add(
 							enemyCF.Position,
 							dmg,
@@ -346,7 +357,7 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 		end
 
 		-- Boss parry / damage
-		if (World:has(entity, Tags.Parried) or World:has(entity, Tags.SafePlayer)) and bossRoot then
+		if (World:has(entity, Tags.SafePlayer)) and bossRoot then
 			local toBoss = bossRoot.Position - currentPos
 
 			local t = if segLenSq > 0 then toBoss:Dot(displacement) / segLenSq else 0
@@ -365,7 +376,6 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 					FloatingNumbersController.Add(currentPos, 1, FloatingNumbersController.ENumberType.DamageEnemy)
 
 					World:set(entity, Components.Health, health - 1)
-					World:remove(entity, Tags.Parried)
 					World:remove(entity, Tags.SafePlayer)
 					World:add(entity, Tags.SafeEnemy)
 
@@ -399,7 +409,7 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 		end
 
 		-- Character parry / damage / dash
-		if characterPos and not World:has(entity, Tags.Parried) and not World:has(entity, Tags.SafePlayer) then
+		if characterPos and not World:has(entity, Tags.SafePlayer) then
 			local toPlayer = characterPos - currentPos
 
 			local t = if segLenSq > 0 then toPlayer:Dot(displacement) / segLenSq else 0
@@ -426,7 +436,8 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 					local speedMult = ParryController.GetChargeMultiplier()
 					local targetEntity, targetPos = TargetController.GetTarget()
 
-					World:add(entity, Tags.Parried)
+					World:add(entity, Tags.SafePlayer)
+					World:remove(entity, Tags.SafeEnemy)
 
 					if targetEntity then
 						local targetAttach = World:get(targetEntity, Components.Attachment)

@@ -72,7 +72,7 @@ function HealthController.Heal(value: number)
 end
 
 function HealthController.Revive()
-	Health = MaxHealth
+	HealthController.SetHealth(MaxHealth)
 
 	if not IsDead then return end
 

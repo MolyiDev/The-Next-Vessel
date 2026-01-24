@@ -39,6 +39,9 @@ local DashRight: AnimationTrack
 local DashAnimations: { [Vector3]: { AnimationTrack } } = {}
 
 local DashController = {}
+DashController.AutoProjectiles = 1
+DashController.AutoProjectilesCooldown = 2
+DashController.AutoProjectilesCurrentCooldown = 2
 DashController.LastDashTime = 0
 DashController.Direction = Vector3.zero
 DashController.StoredProjectiles = 9999
