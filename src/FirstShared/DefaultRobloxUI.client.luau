@@ -1,7 +1,4 @@
-local ReplicatedFirst = game:GetService("ReplicatedFirst")
 local StarterGui = game:GetService("StarterGui")
-
-ReplicatedFirst:RemoveDefaultLoadingScreen()
 
 task.spawn(function()
 	local success = false

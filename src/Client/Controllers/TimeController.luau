@@ -63,15 +63,23 @@ RunService.Heartbeat:Connect(function(dt)
 	UI.SetTime(TimeController.Timer)
 end)
 
-function TimeController.Play()
+function TimeController.PlayTimer()
 	TimeController.Paused = false
 end
 
-function TimeController.Pause()
+function TimeController.PauseTimer()
 	TimeController.Paused = true
 end
 
-function TimeController.Reset()
+function TimeController.AppearTimer()
+	UI.Appear()
+end
+
+function TimeController.DisappearTimer()
+	UI.Disappear()
+end
+
+function TimeController.ResetTimer()
 	TimeController.Timer = TimeController.Checkpoint
 	UI.SetTime(TimeController.Checkpoint)
 	TimeController.Paused = true

@@ -6,6 +6,7 @@ local SoundsController = require(script.Parent.SoundsController)
 local TimeController = require(script.Parent.TimeController)
 local TweensController = require(script.Parent.TweensController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 local jecs = require(ReplicatedStorage.Packages.jecs)
 local Components = require(ReplicatedStorage.Shared.ECS.Components)
 local World = require(ReplicatedStorage.Shared.ECS.Worlds.World)
@@ -39,12 +40,14 @@ local DashRight: AnimationTrack
 local DashAnimations: { [Vector3]: { AnimationTrack } } = {}
 
 local DashController = {}
+DashController.OnDashUsed = Signal.new()
+DashController.OnProjectileShooted = Signal.new()
 DashController.AutoProjectiles = 1
 DashController.AutoProjectilesCooldown = 2
 DashController.AutoProjectilesCurrentCooldown = 2
 DashController.LastDashTime = 0
 DashController.Direction = Vector3.zero
-DashController.StoredProjectiles = 9999
+DashController.StoredProjectiles = 1
 
 local CurrentAnimations: { AnimationTrack } = {}
 

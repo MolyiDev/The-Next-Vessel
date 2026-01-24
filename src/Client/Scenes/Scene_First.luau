@@ -1,5 +1,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TimeController = require(script.Parent.Parent.Controllers.TimeController)
 local HotbarController = require(script.Parent.Parent.Controllers.HotbarController)
+local AbilitiesController = require(script.Parent.Parent.Controllers.AbilitiesController)
 local BossLifebarController = require(script.Parent.Parent.Controllers.BossController.BossLifebarController)
 local TweensController = require(script.Parent.Parent.Controllers.TweensController)
 local ColliderControler = require(script.Parent.Parent.Controllers.ColliderControler)
@@ -40,7 +42,6 @@ end
 
 function Scene_First.Start()
 	HealthController.Revive()
-	HotbarController.Appear()
 
 	Scene_First.IsActive = true
 	Scene_First.ShouldRestart = true
@@ -117,7 +118,7 @@ function Scene_First.Start()
 			Scene_First.IsActive = false
 			Scene_First.SelectedUpgrade = nil
 
-			return EScenes.Third
+			return EScenes.Second
 		end)
 		:catch(function(err)
 			warn("[Scene_First] Error:", err)
@@ -135,7 +136,9 @@ function Scene_First.Stop()
 	FlamesController.Dissapear()
 	TridentController.Reset()
 	HotbarController.Disappear()
+	AbilitiesController.Disappear()
 	BossLifebarController.Disappear()
+	TimeController.DisappearTimer()
 
 	if Scene_First.SelectedUpgrade then
 		UpgradesController.RemoveUpgrade(Scene_First.SelectedUpgrade)

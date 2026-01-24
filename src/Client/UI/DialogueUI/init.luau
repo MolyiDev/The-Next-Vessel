@@ -2,6 +2,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
 local scaleNumber = require(StarterPlayer.StarterPlayerScripts.Client.UI.Components.scaleNumber)
 local Fluid = require(ReplicatedStorage.Shared.Utils.Fluid)
+local EAssets = require(ReplicatedStorage.Types.Enums.EAssets)
 
 export type DialogueUIReturn = {
 	UI: any,
@@ -115,7 +116,7 @@ return function(): DialogueUIReturn
 			create("ImageLabel")({
 				Name = "Border",
 				BackgroundTransparency = 1,
-				Image = "rbxassetid://112173964841374",
+				Image = EAssets.DialogueBackground,
 				ImageTransparency = transparency,
 				ResampleMode = Enum.ResamplerMode.Pixelated,
 				ScaleType = Enum.ScaleType.Slice,

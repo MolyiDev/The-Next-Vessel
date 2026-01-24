@@ -41,7 +41,7 @@ function HealthController.SetHealth(value: number)
 	if newHealth <= 0 then
 		if not IsDead then
 			IsDead = true
-			TimeController.Pause()
+			TimeController.PauseTimer()
 			HealthController.OnDead:Fire()
 		end
 	end

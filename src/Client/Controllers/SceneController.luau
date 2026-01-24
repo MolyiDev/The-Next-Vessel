@@ -21,7 +21,7 @@ local TScene = require(ReplicatedStorage.Types.TScene)
 local SCENE_MODULES: { [number]: TScene.TScene } = table.freeze({
 	[EScenes.First] = require(script.Parent.Parent.Scenes.Scene_First),
 	[EScenes.Second] = require(script.Parent.Parent.Scenes.Scene_Second),
-	[EScenes.Third] = require(script.Parent.Parent.Scenes.Scene_Third),
+	-- [EScenes.Third] = require(script.Parent.Parent.Scenes.Scene_Third),
 })
 
 local Player = Players.LocalPlayer
@@ -110,7 +110,7 @@ SceneController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 		-- Test
 		UpgradesController.AddUpgrade(EUpgrades.Dash)
 		UpgradesController.AddUpgrade(EUpgrades.Parry)
-		SceneController.LoadScene(EScenes.Third)
+		SceneController.LoadScene(EScenes.Second)
 
 		-- Normal
 		-- SceneController.LoadScene(EScenes.First)

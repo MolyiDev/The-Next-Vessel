@@ -1,5 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local Signal = require(ReplicatedStorage.Packages.Signal)
 local CameraController = require(script.Parent.CameraController)
 local ESounds = require(ReplicatedStorage.Types.Enums.ESounds)
 local SoundsController = require(script.Parent.SoundsController)
@@ -15,10 +16,11 @@ local BASE_MULTIPLIER = 1.1
 local MAX_MULTIPLIER = 2.5
 
 local ParryController = {}
+ParryController.OnParryUsed = Signal.new()
 ParryController.IsCharging = false
 ParryController.ChargeStartTime = 0
-ParryController.PressTime = 0 -- Time of initial click (Defensive window)
-ParryController.ReleaseTime = 0 -- Time of release swing (Offesive window)
+ParryController.PressTime = 0
+ParryController.ReleaseTime = 0
 ParryController.StoredMultiplier = BASE_MULTIPLIER
 ParryController.CurrentTarget = nil :: BasePart?
 

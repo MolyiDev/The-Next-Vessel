@@ -40,6 +40,32 @@ function BossSpawnController.ProjectilesAtSceneStart(damage: number, speedMultip
 	end
 end
 
+function BossSpawnController.ProjectilesAtSceneThird(damage: number, speedMultiplier: number?)
+	speedMultiplier = speedMultiplier or 1
+	local bossCf = BossController.GetCFrame()
+	local bossPosition = bossCf.Position - bossCf.LookVector
+	bossCf -= bossCf.LookVector
+	local character = Player.Character
+
+	if not character then return end
+
+	local directions = {
+		(bossPosition + bossCf.UpVector) - bossPosition, -- up
+	}
+
+	for _, dir in directions do
+		ProjectileController.AddProjectileMissile(
+			bossPosition,
+			dir.Unit,
+			character.PrimaryPart,
+			120 * speedMultiplier :: any,
+			2.5,
+			ProjectileController.ESender.Enemy,
+			damage
+		)
+	end
+end
+
 function BossSpawnController.EnemiesRadial(damage: number, health: number, allowedTypes: { number }?)
 	local bossCf = BossController.GetCFrame()
 	local bossPosition = bossCf.Position - bossCf.LookVector

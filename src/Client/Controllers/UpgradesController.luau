@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
+local Signal = require(ReplicatedStorage.Packages.Signal)
 local HealthController = require(script.Parent.HealthController)
 local MouseController = require(script.Parent.MouseController)
 local Fluid = require(ReplicatedStorage.Shared.Utils.Fluid)
@@ -8,15 +9,16 @@ local UpgradeUI = require(StarterPlayer.StarterPlayerScripts.Client.UI.UpgradeUI
 local ERarity = require(ReplicatedStorage.Types.Enums.ERarity)
 local EUpgrades = require(ReplicatedStorage.Types.Enums.EUpgrades)
 local Promise = require(ReplicatedStorage.Shared.Utils.Promise)
+local EAssets = require(ReplicatedStorage.Types.Enums.EAssets)
 
 local Player = Players.LocalPlayer
 local PlayerGui = Player:WaitForChild("PlayerGui")
 
--- Type: 'Percent' (0.1 = 10%) or 'Flat' (20 = +20)
+-- Type: Percent (0.1 = 10%) or Flat (20 = +20)
 local UPGRADE_SCALING = {
-	[EUpgrades.Power] = { Type = "Percent", Amount = 0.10 },
+	[EUpgrades.Power] = { Type = "Flat", Amount = 1 },
 	[EUpgrades.Reflexes] = { Type = "Percent", Amount = 0.10 },
-	[EUpgrades.Mana] = { Type = "Percent", Amount = 0.20 },
+	[EUpgrades.Mana] = { Type = "Flat", Amount = 0.20 },
 	[EUpgrades.Health] = { Type = "Flat", Amount = 20 },
 	[EUpgrades.Poison] = { Type = "Percent", Amount = 0.20 },
 	[EUpgrades.SlowTime] = { Type = "Percent", Amount = 0.10 },
@@ -49,13 +51,13 @@ local UPGRADES_DESCRIPTION = {
 }
 
 local UPGRADES_IMAGES = {
-	[EUpgrades.Power] = "rbxassetid://114904268719029",
-	[EUpgrades.Reflexes] = "rbxassetid://85090421547668",
-	[EUpgrades.Health] = "rbxassetid://135331490511011",
-	[EUpgrades.Dash] = "rbxassetid://131468682765264",
-	[EUpgrades.Parry] = "rbxassetid://71534864279945",
-	[EUpgrades.Antidote] = "rbxassetid://125789700898819",
-	[EUpgrades.Poison] = "rbxassetid://125789700898819",
+	[EUpgrades.Power] = EAssets.PowerIcon,
+	[EUpgrades.Reflexes] = EAssets.ProjectileIcon,
+	[EUpgrades.Health] = EAssets.HealthIcon,
+	[EUpgrades.Dash] = EAssets.DashIcon,
+	[EUpgrades.Parry] = EAssets.ParryIcon,
+	[EUpgrades.Antidote] = EAssets.AntidoteIcon,
+	[EUpgrades.Poison] = EAssets.PoisonIcon,
 }
 
 local STACKABLE_UPGRADES = {
@@ -94,6 +96,7 @@ local RARITY_COLORS = {
 }
 
 local UpgradesController = {}
+UpgradesController.OnUpgradesChanged = Signal.new() :: Signal.Signal<number, number, boolean>
 local OwnedUpgrades: { [number]: number } = {}
 local CurrentPromise: Promise.Promise?
 local UI: UpgradeUI.UpgradeUIReturn
@@ -164,6 +167,8 @@ function UpgradesController.AddUpgrade(upgradeId: number)
 	local currentLevel = OwnedUpgrades[upgradeId] or 0
 	OwnedUpgrades[upgradeId] = currentLevel + 1
 
+	UpgradesController.OnUpgradesChanged:Fire(upgradeId, currentLevel + 1, true)
+
 	if upgradeId == EUpgrades.Health then
 		local config = UPGRADE_SCALING[EUpgrades.Health]
 		local amountToAdd = config.Amount
@@ -229,14 +234,16 @@ function UpgradesController.HasUpgrade(upgrade: number)
 	return OwnedUpgrades[upgrade] ~= nil
 end
 
-function UpgradesController.RemoveUpgrade(upgrade: number)
-	local currentLevel = OwnedUpgrades[upgrade]
+function UpgradesController.RemoveUpgrade(upgradeId: number)
+	local currentLevel = OwnedUpgrades[upgradeId]
 	if not currentLevel then return end
 
 	if currentLevel > 1 then
-		OwnedUpgrades[upgrade] = currentLevel - 1
+		OwnedUpgrades[upgradeId] = currentLevel - 1
+		UpgradesController.OnUpgradesChanged:Fire(upgradeId, currentLevel - 1, true)
 	else
-		OwnedUpgrades[upgrade] = nil
+		OwnedUpgrades[upgradeId] = nil
+		UpgradesController.OnUpgradesChanged:Fire(upgradeId, 0, false)
 	end
 
 	-- TODO: Remove data, like the 20% of the health added.

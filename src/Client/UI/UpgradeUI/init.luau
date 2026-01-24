@@ -3,6 +3,7 @@ local StarterPlayer = game:GetService("StarterPlayer")
 local scaleNumber = require(StarterPlayer.StarterPlayerScripts.Client.UI.Components.scaleNumber)
 local Fluid = require(ReplicatedStorage.Shared.Utils.Fluid)
 local Tools = require(ReplicatedStorage.Shared.Utils.Tools)
+local EAssets = require(ReplicatedStorage.Types.Enums.EAssets)
 
 export type UpgradeUIParams = {
 	SelectedCard: (upgrade: number) -> (),
@@ -64,7 +65,7 @@ return function(params: UpgradeUIParams): UpgradeUIReturn
 		return create("ImageButton")({
 			Name = "Upgrade",
 			BackgroundTransparency = 1,
-			Image = "rbxassetid://121546511572946",
+			Image = EAssets.UpgradeBackground,
 			ImageTransparency = transparency,
 			Position = UDim2.fromScale(0.403856, 0.347583),
 			ResampleMode = Enum.ResamplerMode.Pixelated,

@@ -5,10 +5,14 @@ local Tools = require(ReplicatedStorage.Shared.Utils.Tools)
 export type TimerUIReturn = {
 	UI: any,
 	SetTime: (value: number) -> (),
+	Appear: () -> (),
+	Disappear: () -> (),
 }
 
 local create = Fluid.create
 local source = Fluid.source
+local derive = Fluid.derive
+local spring = Fluid.spring
 
 local function formatTime(seconds: number): string
 	local minutes = math.floor(seconds / 60)
@@ -17,6 +21,13 @@ local function formatTime(seconds: number): string
 end
 
 return function(): TimerUIReturn
+	local transparencyTarget = source(1)
+	local transparency = spring(transparencyTarget, 20, 0.8)
+	local strokeTransparency = derive(function()
+		local t = transparency()
+		return math.min(1, t / 0.85)
+	end)
+
 	local timerStr = source("00:00")
 
 	local ui = create("ScreenGui")({
@@ -35,6 +46,7 @@ return function(): TimerUIReturn
 			Position = UDim2.fromScale(1, 0),
 			Size = UDim2.fromScale(0.08, 0.065),
 			Text = timerStr,
+			TextTransparency = transparency,
 			TextColor3 = Color3.new(1, 1, 1),
 			TextScaled = true,
 
@@ -45,6 +57,7 @@ return function(): TimerUIReturn
 			create("UIStroke")({
 				StrokeSizingMode = Enum.StrokeSizingMode.ScaledSize,
 				Thickness = 0.07,
+				Transparency = strokeTransparency,
 			}),
 		}),
 	})
@@ -53,6 +66,12 @@ return function(): TimerUIReturn
 		UI = ui,
 		SetTime = function(value: number)
 			timerStr(formatTime(value))
+		end,
+		Appear = function()
+			transparencyTarget(0)
+		end,
+		Disappear = function()
+			transparencyTarget(1)
 		end,
 	}
 end

@@ -6,7 +6,7 @@ local resetBindable = Instance.new("BindableEvent")
 
 resetBindable.Event:Connect(function()
 	if HealthController.IsDead() then
-		TimeController.Reset()
+		TimeController.ResetTimer()
 		SceneController.Restart()
 	else
 		HealthController.Kill()
