@@ -89,7 +89,10 @@ UserInputService.InputEnded:Connect(function(input, gp)
 		ChargeTask = nil
 	end
 
-	if not ParryController.IsCharging then return end
+	if not ParryController.IsCharging then
+		ParryController.ReleaseTime = time()
+		return
+	end
 
 	local duration = time() - ParryController.ChargeStartTime
 	local alpha = math.clamp(duration / FULL_CHARGE_TIME, 0, 1)

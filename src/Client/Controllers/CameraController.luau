@@ -154,6 +154,10 @@ CameraController.OnCharacterAdded = function(character: TCharacter.TCharacter, c
 	butler:Connect(RunService.PreRender, function(dt)
 		AccumulatedTime += dt
 
+		UserInputService.MouseBehavior = if CameraController.CameraLocked
+			then Enum.MouseBehavior.LockCenter
+			else Enum.MouseBehavior.Default
+
 		if CameraController.CinematicCameraActive then
 			if Camera.CameraType ~= Enum.CameraType.Scriptable then Camera.CameraType = Enum.CameraType.Scriptable end
 

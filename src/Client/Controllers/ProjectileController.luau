@@ -232,49 +232,16 @@ UserInputService.InputBegan:Connect(function(input, gp)
 
 	if not DashController.UseAmmo() then return end
 
-	local targetEnt, targetPos = TargetController.GetTarget()
-	local targetInstance = nil
-
-	if targetEnt then
-		targetInstance = World:get(targetEnt, Components.Attachment)
-			or World:get(targetEnt, Components.Model)
-			or World:get(targetEnt, Components.Bone)
-	end
-
 	local startPos = root.Position + root.CFrame.LookVector * 3
+	local dir = Workspace.CurrentCamera.CFrame.LookVector
 	local speed = 90
 	local radius = 2.5
 	local dmg = 1
 	local health = 1
 
-	if not targetInstance then
-		local dir = Workspace.CurrentCamera.CFrame.LookVector
-		ProjectileController.AddProjectile(
-			startPos,
-			dir,
-			speed,
-			radius,
-			ProjectileController.ESender.Player,
-			dmg,
-			health
-		)
+	ProjectileController.AddProjectile(startPos, dir, speed, radius, ProjectileController.ESender.Player, dmg, health)
 
-		return
-	end
-
-	local dir = (targetPos - startPos).Unit
-	ProjectileController.AddProjectileMissile(
-		startPos,
-		dir,
-		targetInstance :: any,
-		speed,
-		radius,
-		ProjectileController.ESender.Player,
-		dmg,
-		health
-	)
-
-	-- SoundsController.PlayCharacter(ESounds.Parry) -- Placeholder sound
+	SoundsController.PlayCharacter(ESounds.MagicShoot)
 end)
 
 RunService.Heartbeat:Connect(function(rawDt: number)
@@ -288,11 +255,29 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 	local bossRig = BossController.GetRig()
 	local bossRoot = if bossRig then bossRig.PrimaryPart else nil
 
+	local currentTargetEnt = TargetController.GetTarget()
+	local currentTargetInstance = nil
+
+	if currentTargetEnt then
+		currentTargetInstance = World:get(currentTargetEnt, Components.Attachment)
+			or World:get(currentTargetEnt, Components.Model)
+			or World:get(currentTargetEnt, Components.Bone)
+	end
+
 	-- Logic update
 	for entity, cf, direction, speed, radius in
 		World:query(Components.CFrame, Components.Direction, Components.Speed, Components.Radius, Tags.Projectile)
 	do
 		local currentPos = cf.Position
+
+		if World:has(entity, Tags.SafePlayer) then
+			if currentTargetInstance then
+				World:set(entity, Components.Target, currentTargetInstance :: any)
+			else
+				World:remove(entity, Components.Target)
+			end
+		end
+
 		local target = World:get(entity, Components.Target) :: BasePart
 
 		-- Target turn
@@ -418,7 +403,7 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 			local closestPointOnPath = currentPos + (displacement * clampedT)
 			local distToPath = (characterPos - closestPointOnPath).Magnitude
 
-			if distToPath < (radius * 3) then
+			if distToPath < (radius * 2.5) then
 				if ParryController.IsParrying() then
 					local health = (World:get(entity, Components.Health) or 0) - 1
 

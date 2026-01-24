@@ -158,8 +158,8 @@ local function update(rawDt: number)
 end
 
 function DashController.AddAmmo()
+	SoundsController.PlayCharacter(ESounds.MagicReload)
 	DashController.StoredProjectiles += 1
-	-- TODO: Visual/Sound feedback for absorbing
 end
 
 function DashController.UseAmmo(): boolean

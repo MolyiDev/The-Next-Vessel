@@ -6,4 +6,6 @@ return table.freeze({
 	Dash = 4,
 	PlayerDamaged = 5,
 	PlayerJump = 6,
+	MagicShoot = 7,
+	MagicReload = 8,
 })

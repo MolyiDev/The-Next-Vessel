@@ -17,75 +17,84 @@ local PlayerGui = Player:WaitForChild("PlayerGui")
 -- Type: Percent (0.1 = 10%) or Flat (20 = +20)
 local UPGRADE_SCALING = {
 	[EUpgrades.Power] = { Type = "Flat", Amount = 1 },
-	[EUpgrades.Reflexes] = { Type = "Percent", Amount = 0.10 },
-	[EUpgrades.Mana] = { Type = "Flat", Amount = 0.20 },
-	[EUpgrades.Health] = { Type = "Flat", Amount = 20 },
-	[EUpgrades.Poison] = { Type = "Percent", Amount = 0.20 },
+	[EUpgrades.Health] = { Type = "Flat", Amount = 10 },
+	[EUpgrades.Projectiles] = { Type = "Flat", Amount = 1 },
+	[EUpgrades.Bounces] = { Type = "Flat", Amount = 1 },
 	[EUpgrades.SlowTime] = { Type = "Percent", Amount = 0.10 },
+	[EUpgrades.ProjectilesRegen] = { Type = "Percent", Amount = 0.10 },
 }
 
 local UPGRADES_NAME = {
 	[EUpgrades.Power] = "Power",
-	[EUpgrades.Reflexes] = "Reflexes",
 	[EUpgrades.Health] = "Vitality",
+	[EUpgrades.Projectiles] = "Projectiles",
+	[EUpgrades.ProjectilesRegen] = "Projectiles Regen",
 	[EUpgrades.Dash] = "Dash",
+	[EUpgrades.DashGod] = "Dash God",
 	[EUpgrades.Parry] = "Parry",
-	[EUpgrades.Antidote] = "Antidote",
-	[EUpgrades.Mana] = "Mana Flow",
-	[EUpgrades.Poison] = "Venomous Parry",
-	[EUpgrades.ParryGod] = "Parry God",
+	[EUpgrades.Bounces] = "Bounces",
+	[EUpgrades.TargetGod] = "Target God",
 }
 
 local UPGRADES_DESCRIPTION = {
-	[EUpgrades.Power] = "Increases raw power.\nDamage: %s",
-	[EUpgrades.Reflexes] = "Heightens senses. Projectiles appear slower.\nSpeed Reduction: %s",
-	[EUpgrades.Health] = "Fortifies vitality.\nMax Health: %s",
-	[EUpgrades.Mana] = "Expands magical capacity.\nMana: %s",
-	[EUpgrades.Poison] = "Parried projectiles become venomous.\nPoison Damage: %s",
-	[EUpgrades.SlowTime] = "Temporarily slows time.\nDuration: %s",
-
-	[EUpgrades.Antidote] = "Builds immunity.\nGrants permanent resistance to <font color='#A020F0'><b>Poison</b></font> effects.",
-	[EUpgrades.Dash] = "Unlocks <font color='#00FFFF'><b>Dash [Q]</b></font>.\nBecome <b>invulnerable</b>. Dashes break projectiles, converting them into Health and Mana.",
-	[EUpgrades.Parry] = "Unlocks <font color='#00FFFF'><b>Parry [F]</b></font>.\n<b>Deflect</b> incoming attacks. Hold to charge return speed.\n<font size='14'><i>Cannot parry Yellow projectiles.</i></font>",
-	[EUpgrades.ParryGod] = "Mastery over defense.\nAllows you to <font color='#FFD700'><b>Parry Yellow Projectiles</b></font>.",
+	[EUpgrades.TargetGod] = "Automatically target the next enemy when the current one dies.",
+	[EUpgrades.Power] = "Increases your attack damage.\n<font color='#FFA500'>Damage:</font> %s",
+	[EUpgrades.Health] = "Increases your maximum health.\n<font color='#00FF7F'>Max Health:</font> %s",
+	[EUpgrades.Projectiles] = "Increases the amount of projectiles you regenerate per cycle.\n<font color='#FFA500'>Amount:</font> %s",
+	[EUpgrades.ProjectilesRegen] = "Reduces the time it takes to regenerate projectiles.\n<font color='#00FFFF'>Cooldown:</font> %s",
+	[EUpgrades.Bounces] = "Attacks bounce to nearby enemies.\n<font color='#FFA500'>Bounces:</font> %s",
+	[EUpgrades.SlowTime] = "Slows down enemies and projectiles.\n<font color='#00FFFF'>Duration:</font> %s",
+	[EUpgrades.Dash] = "Unlocks <font color='#00FFFF'><b>Dash [Q]</b></font>.\nDash to become <b>invulnerable</b>. Move through projectiles to capture them.",
+	[EUpgrades.DashGod] = "Allows you to change direction while dashing.",
+	[EUpgrades.Parry] = "Unlocks <font color='#00FFFF'><b>Parry [Right Click]</b></font>.\nReflect damage back at enemies.",
 }
 
 local UPGRADES_IMAGES = {
 	[EUpgrades.Power] = EAssets.PowerIcon,
-	[EUpgrades.Reflexes] = EAssets.ProjectileIcon,
 	[EUpgrades.Health] = EAssets.HealthIcon,
+	[EUpgrades.Projectiles] = EAssets.ProjectilesIcon,
+	[EUpgrades.ProjectilesRegen] = EAssets.ProjectilesRegenIcon,
+	[EUpgrades.Bounces] = EAssets.BouncesIcon,
 	[EUpgrades.Dash] = EAssets.DashIcon,
+	[EUpgrades.DashGod] = EAssets.DashGodIcon,
 	[EUpgrades.Parry] = EAssets.ParryIcon,
-	[EUpgrades.Antidote] = EAssets.AntidoteIcon,
-	[EUpgrades.Poison] = EAssets.PoisonIcon,
+	[EUpgrades.SlowTime] = EAssets.SlowTimeIcon,
+	[EUpgrades.TargetGod] = EAssets.TargetGodIcon,
 }
 
 local STACKABLE_UPGRADES = {
 	[EUpgrades.Power] = true,
-	[EUpgrades.Reflexes] = true,
 	[EUpgrades.Health] = true,
-	[EUpgrades.Mana] = true,
-	[EUpgrades.Poison] = true,
 	[EUpgrades.SlowTime] = true,
+	[EUpgrades.Bounces] = true,
+	[EUpgrades.Projectiles] = true,
+	[EUpgrades.ProjectilesRegen] = true,
 }
 
 local UPGRADES_LIST = {
 	EUpgrades.Power,
-	EUpgrades.Reflexes,
 	EUpgrades.Health,
+	EUpgrades.Projectiles,
+	EUpgrades.ProjectilesRegen,
+	EUpgrades.Bounces,
 	EUpgrades.Dash,
+	EUpgrades.DashGod,
 	EUpgrades.Parry,
-	EUpgrades.Antidote,
+	EUpgrades.SlowTime,
+	EUpgrades.TargetGod,
 }
 
 local UPGRADES_RARITIES = {
 	[EUpgrades.Power] = ERarity.Common,
-	[EUpgrades.Reflexes] = ERarity.Common,
 	[EUpgrades.Health] = ERarity.Common,
+	[EUpgrades.Projectiles] = ERarity.Common,
+	[EUpgrades.ProjectilesRegen] = ERarity.Common,
+	[EUpgrades.Bounces] = ERarity.Uncommon,
 	[EUpgrades.Dash] = ERarity.Uncommon,
 	[EUpgrades.Parry] = ERarity.Uncommon,
-	[EUpgrades.Antidote] = ERarity.Rare,
+	[EUpgrades.DashGod] = ERarity.Rare,
 	[EUpgrades.SlowTime] = ERarity.Epic,
+	[EUpgrades.TargetGod] = ERarity.Epic,
 }
 
 local RARITY_COLORS = {
