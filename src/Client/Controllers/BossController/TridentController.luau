@@ -45,23 +45,23 @@ function TridentController.Throw(speed: number?)
 				return
 			end
 
-			local TargetPosition = head.Position
-			local Direction = (TargetPosition - currentPosition).Unit
-			local StepDistance = TRIDENT_SPEED * DeltaTime
+			local targetPosition = head.Position
+			local direction = (targetPosition - currentPosition).Unit
+			local stepDistance = TRIDENT_SPEED * DeltaTime
 
-			local RayParams = RaycastParams.new()
-			RayParams.FilterDescendantsInstances = { Trident }
-			RayParams.FilterType = Enum.RaycastFilterType.Exclude
+			local rayParams = RaycastParams.new()
+			rayParams.FilterDescendantsInstances = { Trident }
+			rayParams.FilterType = Enum.RaycastFilterType.Exclude
 
-			local RayResult = Workspace:Raycast(currentPosition, Direction * StepDistance, RayParams)
+			local rayResult = Workspace:Raycast(currentPosition, direction * stepDistance, rayParams)
 
-			if RayResult then
-				Trident.CFrame = CFrame.lookAt(RayResult.Position, RayResult.Position + Direction)
+			if rayResult then
+				Trident.CFrame = CFrame.lookAt(rayResult.Position, rayResult.Position + direction)
 					* TRIDENT_VISUAL_OFFSET
 
-				local HitModel = RayResult.Instance:FindFirstAncestorOfClass("Model")
+				local hitModel = rayResult.Instance:FindFirstAncestorOfClass("Model")
 
-				if HitModel and HitModel == targetChar then
+				if hitModel and hitModel == targetChar then
 					cleanup()
 					resolve("Hit")
 				else
@@ -72,8 +72,8 @@ function TridentController.Throw(speed: number?)
 				return
 			end
 
-			currentPosition = currentPosition + (Direction * StepDistance)
-			Trident.CFrame = CFrame.lookAt(currentPosition, TargetPosition) * TRIDENT_VISUAL_OFFSET
+			currentPosition = currentPosition + (direction * stepDistance)
+			Trident.CFrame = CFrame.lookAt(currentPosition, targetPosition) * TRIDENT_VISUAL_OFFSET
 		end)
 	end)
 end

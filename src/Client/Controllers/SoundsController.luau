@@ -21,6 +21,16 @@ for _, sound in SoundsFolder:GetDescendants() do
 	Sounds[id] = { Sound = sound, BaseSpeed = sound.PlaybackSpeed }
 end
 
+function SoundsController.Clone(soundId: number, parent: any): Sound?
+	local data = Sounds[soundId]
+	if not data then return nil end
+
+	local clone = data.Sound:Clone()
+	clone.Parent = parent
+
+	return clone
+end
+
 function SoundsController.Play(soundId: number, parent: any)
 	local data = Sounds[soundId]
 	if not data then return end

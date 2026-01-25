@@ -110,7 +110,7 @@ local function moveDirection()
 	stopAllAnimations(FADE_OUT)
 	if Direction == Vector3.zero or TweensController.IsImmobile then return end
 
-	if ShiftTouched and Direction.Z ~= 1 then
+	if ShiftTouched then
 		CurrentBaseSpeed = EMovementSpeeds.Running
 		CurrentBaseJump = EMovementJumps.Running
 		TweensController.SetCameraFov(ECameraFovs.Running, TweenInfo.new(0.2))

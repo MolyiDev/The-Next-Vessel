@@ -16,8 +16,10 @@ local Tags = require(ReplicatedStorage.Shared.ECS.Tags)
 local World = require(ReplicatedStorage.Shared.ECS.Worlds.World)
 local ObjectPooler = require(ReplicatedStorage.Shared.Utils.ObjectPooler)
 local SpatialHash = require(ReplicatedStorage.Shared.Utils.SpatialHash)
+local EUpgrades = require(ReplicatedStorage.Types.Enums.EUpgrades)
 local TCharacter = require(ReplicatedStorage.Types.TCharacter)
 local TimeController = require(script.Parent.TimeController)
+local UpgradesController = require(script.Parent.UpgradesController)
 
 type Spirit = {} & Attachment
 
@@ -27,11 +29,13 @@ type SpiritBreak = {
 	SpiritBreak: Sound,
 } & Attachment
 
+local DOWN_VECTOR = Vector3.yAxis * -50
 local TURN_STRENGTH = 4
 local SEPARATION_RADIUS = 6
 local SEPARATION_FORCE = 1.5
 local MAX_ENEMIES = 40
 local WALL_MARGIN = 2
+local MIN_GROUND_HEIGHT = 4
 
 local Player = Players.LocalPlayer
 
@@ -180,12 +184,14 @@ function EnemiesController.HitEnemy(entity: jecs.Entity, damage: number)
 
 	if newHealth <= 0 then
 		local currentTarget, _ = TargetController.GetTarget()
-		if currentTarget == entity then TargetController.SwitchToNextTarget(entity) end
+
+		if currentTarget == entity and UpgradesController.HasUpgrade(EUpgrades.TargetGod) then
+			TargetController.SwitchToNextTarget(entity)
+		end
 
 		EnemiesController.BreakEnemy(entity)
 	else
 		World:set(entity, Components.Health, newHealth)
-		-- Optional: Visual feedback for hit (flash white, etc.)
 	end
 end
 
@@ -207,31 +213,24 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 		local currentPos = cf.Position
 		if not characterPos then continue end
 
-		-- 1. Prediction (Intercept logic)
 		local toPlayer = characterPos - currentPos
 		local distToPlayer = toPlayer.Magnitude
-		-- Calculate how far ahead to look. Cap it (e.g., 1.5s) so they don't aim at infinity.
 		local lookAhead = math.clamp(distToPlayer / speed, 0, 1.5)
 		local predictedPos = characterPos + (characterVel * lookAhead)
 
-		-- 2. Spirit Drift (Perpendicular Sine Wave)
-		-- Uses entity ID as a seed so they don't all wave in sync
 		local waveFreq = 3
-		local waveAmp = 8 -- How wide they drift (in studs)
-		local timeOffset = entity / 5 -- Pseudo-random offset based on Entity ID
+		local waveAmp = 8
+		local timeOffset = entity / 5
 
-		-- Calculate a vector to the right of the target direction
 		local rawDirToTarget = (predictedPos - currentPos).Unit
 		local rightVec = rawDirToTarget:Cross(Vector3.yAxis)
 		local driftOffset = rightVec * math.sin((os.clock() * waveFreq) + timeOffset) * waveAmp
 
-		-- Final Target Direction
 		local finalTargetPos = predictedPos + driftOffset
 
 		local separationVec = Vector3.zero
 		local neighbors = 0
 
-		-- Query neighbors within SEPARATION_RADIUS
 		EnemiesController.SpatialHash:QuerySphereAsPoints(
 			currentPos.X,
 			currentPos.Y,
@@ -246,9 +245,8 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 				local toNeighbor = neighborCF.Position - currentPos
 				local dist = toNeighbor.Magnitude
 
-				if dist < 0.1 then dist = 0.1 end -- Prevent division by zero
+				if dist < 0.1 then dist = 0.1 end
 
-				-- The closer they are, the stronger the push away
 				local pushStrength = (1 - (dist / SEPARATION_RADIUS)) * SEPARATION_FORCE
 				separationVec -= (toNeighbor / dist) * pushStrength
 				neighbors += 1
@@ -258,20 +256,15 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 		local targetDir = (finalTargetPos - currentPos).Unit
 		if neighbors > 0 then targetDir = (targetDir + separationVec).Unit end
 
-		-- Steering
 		local currentDir = direction
 		local dynamicTurnSpeed = TURN_STRENGTH + (speed / 40)
 		local newDir = currentDir:Lerp(targetDir, math.clamp(dt * dynamicTurnSpeed, 0, 1)).Unit
 
-		-- Update Direction for physics
 		direction = newDir
 		World:set(entity, Components.Direction, newDir)
 
-		-- Calculate proposed movement
 		local displacement = direction * speed * dt
 
-		-- [NEW] 4. Wall Collision Check (Raycast)
-		-- Cast a ray forward from the center + radius to see if we are about to hit a wall
 		local castDistance = (radius + displacement.Magnitude) + WALL_MARGIN
 		local castDir = direction * castDistance
 		local rayResult = Workspace:Raycast(currentPos, castDir, RayParams)
@@ -281,14 +274,9 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 			local dot = displacement:Dot(normal)
 
 			if dot < 0 then
-				-- Slide along the wall
 				displacement = displacement - (normal * dot)
-
-				-- [CHANGED] Push away from the wall to prevent touching/clipping
-				-- This adds a constant "repulsion" velocity away from the surface
 				displacement += normal * 0.2
 
-				-- Adjust future direction
 				local slideDir = direction - (normal * direction:Dot(normal))
 				if slideDir.Magnitude > 0.01 then
 					direction = slideDir.Unit
@@ -308,15 +296,32 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 		local distToPath = (characterPos - closestPoint).Magnitude
 
 		if distToPath < (radius * 3) and DashController.IsDashing() then
-			-- I-Frame (Dash)
+			-- Invulnerable
 		elseif distToPath < radius then
 			HealthController.Damage(World:get(entity, Components.Damage) or 0)
 			KnockbackController.Knockback(direction, 1500)
-			-- Do not 'continue', allow them to move so they don't get stuck inside player
 		end
 
-		-- Update Position
 		local newPos = currentPos + displacement
+
+		local groundRay = Workspace:Raycast(newPos, DOWN_VECTOR, RayParams)
+
+		if groundRay then
+			local floorY = groundRay.Position.Y
+
+			if (newPos.Y - floorY) < MIN_GROUND_HEIGHT then
+				newPos = Vector3.new(newPos.X, floorY + MIN_GROUND_HEIGHT, newPos.Z)
+
+				if direction.Y < 0 then
+					local flatDir = Vector3.new(direction.X, 0, direction.Z)
+					if flatDir.Magnitude > 0.001 then
+						direction = flatDir.Unit
+						World:set(entity, Components.Direction, direction)
+					end
+				end
+			end
+		end
+
 		local newCF = CFrame.new(newPos, newPos + direction)
 		World:set(entity, Components.CFrame, newCF)
 		EnemiesController.SpatialHash:Update(entity, newPos)

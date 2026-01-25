@@ -45,6 +45,7 @@ DashController.OnProjectileShooted = Signal.new()
 DashController.AutoProjectiles = 1
 DashController.AutoProjectilesCooldown = 2
 DashController.AutoProjectilesCurrentCooldown = 2
+DashController.CurrentMaxRegenTime = 2
 DashController.LastDashTime = 0
 DashController.Direction = Vector3.zero
 DashController.StoredProjectiles = 1
@@ -54,7 +55,6 @@ local CurrentAnimations: { AnimationTrack } = {}
 local BodyVelocity: BodyVelocity
 local Character: TCharacter.TCharacter
 local Connection: RBXScriptConnection?
-
 local TimeElapsed = 0
 
 local function stopDash()
@@ -89,51 +89,67 @@ local function updateDashAnimSpeed()
 	end
 end
 
+local function getRawKeyInput(): Vector3
+	local x = 0
+	local z = 0
+
+	if UserInputService:IsKeyDown(Enum.KeyCode.W) then
+		z -= 1
+	end
+
+	if UserInputService:IsKeyDown(Enum.KeyCode.S) then
+		z += 1
+	end
+
+	if UserInputService:IsKeyDown(Enum.KeyCode.A) then
+		x -= 1
+	end
+
+	if UserInputService:IsKeyDown(Enum.KeyCode.D) then
+		x += 1
+	end
+
+	return Vector3.new(x, 0, z)
+end
+
 local function getMoveDirection(): Vector3
 	if not Character then return Vector3.zero end
 
 	local rootCF = Character.HumanoidRootPart.CFrame
 	local look = rootCF.LookVector
 	local right = rootCF.RightVector
+	local input = Vector3.zero
 
-	local direction = Vector3.zero
+	local canSteer = not DashController.IsDashing() or UpgradesController.HasUpgrade(EUpgrades.DashGod)
+	local rawInput = getRawKeyInput()
 
-	if UserInputService:IsKeyDown(Enum.KeyCode.W) then
-		direction += look
-	end
-	if UserInputService:IsKeyDown(Enum.KeyCode.S) then
-		direction -= look
-	end
-	if UserInputService:IsKeyDown(Enum.KeyCode.A) then
-		direction -= right
-	end
-	if UserInputService:IsKeyDown(Enum.KeyCode.D) then
-		direction += right
-	end
+	if rawInput.Magnitude > 0 and canSteer then
+		input = rawInput
+	else
+		local dashDir = DashController.Direction
 
-	if direction.Magnitude > 0 then return direction end
-
-	local dashDir = DashController.Direction
-
-	if dashDir == EDirections.Front then
-		return look
-	elseif dashDir == EDirections.FrontLeft then
-		return look - right
-	elseif dashDir == EDirections.FrontRight then
-		return look + right
-	elseif dashDir == EDirections.Back then
-		return -look
-	elseif dashDir == EDirections.BackLeft then
-		return -look - right
-	elseif dashDir == EDirections.BackRight then
-		return -look + right
-	elseif dashDir == EDirections.Left then
-		return -right
-	elseif dashDir == EDirections.Right then
-		return right
+		if dashDir == EDirections.Front then
+			input = Vector3.new(0, 0, -1)
+		elseif dashDir == EDirections.FrontLeft then
+			input = Vector3.new(-1, 0, -1)
+		elseif dashDir == EDirections.FrontRight then
+			input = Vector3.new(1, 0, -1)
+		elseif dashDir == EDirections.BackLeft then
+			input = Vector3.new(-1, 0, 1)
+		elseif dashDir == EDirections.BackRight then
+			input = Vector3.new(1, 0, 1)
+		elseif dashDir == EDirections.Left then
+			input = Vector3.new(-1, 0, 0)
+		elseif dashDir == EDirections.Right then
+			input = Vector3.new(1, 0, 0)
+		else
+			input = Vector3.new(0, 0, 1)
+		end
 	end
 
-	return -look
+	local worldDirection = (look * -input.Z) + (right * input.X)
+
+	return worldDirection
 end
 
 local function update(rawDt: number)
@@ -220,10 +236,13 @@ function DashController.Dash()
 	BodyVelocity.Parent = Character.HumanoidRootPart
 
 	TimeElapsed = 0
-	DashController.Direction = Tools.WorldMovingDirection(
-		Character.HumanoidRootPart.CFrame:VectorToObjectSpace(Character.Humanoid.MoveDirection)
-	)
-	if DashController.Direction == Vector3.zero then DashController.Direction = EDirections.Back end
+
+	local rawInput = getRawKeyInput()
+	DashController.Direction = Tools.WorldMovingDirection(rawInput)
+
+	if DashController.Direction == Vector3.zero or rawInput.Magnitude == 0 then
+		DashController.Direction = EDirections.Back
+	end
 
 	local animations = DashAnimations[DashController.Direction]
 	if not animations then return end
@@ -244,8 +263,32 @@ end)
 
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp or input.KeyCode ~= Enum.KeyCode.Q then return end
+	if TweensController.IsImmobile or HealthController.IsDead() then return end
 	if not UpgradesController.HasUpgrade(EUpgrades.Dash) then return end
+
 	DashController.Dash()
+end)
+
+RunService.Heartbeat:Connect(function(dt: number)
+	local maxProjectiles = 1 + UpgradesController.GetUpgradeLevel(EUpgrades.Projectiles)
+
+	local regenSpeedLevel = UpgradesController.GetUpgradeLevel(EUpgrades.ProjectilesRegen)
+	local cooldown = DashController.AutoProjectilesCooldown * (1 - (regenSpeedLevel * 0.1))
+	DashController.CurrentMaxRegenTime = cooldown
+
+	if DashController.StoredProjectiles < maxProjectiles then
+		DashController.AutoProjectilesCurrentCooldown -= dt
+		if DashController.AutoProjectilesCurrentCooldown <= 0 then
+			DashController.AutoProjectilesCurrentCooldown = cooldown
+
+			DashController.StoredProjectiles += 1
+			if DashController.StoredProjectiles > maxProjectiles then
+				DashController.StoredProjectiles = maxProjectiles
+			end
+		end
+	else
+		DashController.AutoProjectilesCurrentCooldown = cooldown
+	end
 end)
 
 return Ignis.Register(DashController)

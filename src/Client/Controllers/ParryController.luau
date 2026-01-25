@@ -2,9 +2,11 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local CameraController = require(script.Parent.CameraController)
+local HealthController = require(script.Parent.HealthController)
 local ESounds = require(ReplicatedStorage.Types.Enums.ESounds)
 local SoundsController = require(script.Parent.SoundsController)
 local TimeController = require(script.Parent.TimeController)
+local TweensController = require(script.Parent.TweensController)
 local EUpgrades = require(ReplicatedStorage.Types.Enums.EUpgrades)
 local UpgradesController = require(script.Parent.UpgradesController)
 
@@ -63,6 +65,7 @@ end
 
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp or input.UserInputType ~= Enum.UserInputType.MouseButton2 then return end
+	if TweensController.IsImmobile or HealthController.IsDead() then return end
 	if not UpgradesController.HasUpgrade(EUpgrades.Parry) then return end
 
 	local timeNow = time()

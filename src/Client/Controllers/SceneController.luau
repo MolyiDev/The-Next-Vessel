@@ -5,6 +5,7 @@ local UserInputService = game:GetService("UserInputService")
 local BossController = require(script.Parent.BossController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local ELocations = require(ReplicatedStorage.Types.Enums.ELocations)
 local EScenes = require(ReplicatedStorage.Types.Enums.EScenes)
 local EUpgrades = require(ReplicatedStorage.Types.Enums.EUpgrades)
 local CameraController = require(script.Parent.CameraController)
@@ -12,6 +13,7 @@ local EnemiesController = require(script.Parent.EnemiesController)
 local HealthController = require(script.Parent.HealthController)
 local MouseController = require(script.Parent.MouseController)
 local ProjectileController = require(script.Parent.ProjectileController)
+local TeleportController = require(script.Parent.TeleportController)
 local TimeController = require(script.Parent.TimeController)
 local TweensController = require(script.Parent.TweensController)
 local UpgradesController = require(script.Parent.UpgradesController)
@@ -21,7 +23,7 @@ local TScene = require(ReplicatedStorage.Types.TScene)
 local SCENE_MODULES: { [number]: TScene.TScene } = table.freeze({
 	[EScenes.First] = require(script.Parent.Parent.Scenes.Scene_First),
 	[EScenes.Second] = require(script.Parent.Parent.Scenes.Scene_Second),
-	-- [EScenes.Third] = require(script.Parent.Parent.Scenes.Scene_Third),
+	[EScenes.Third] = require(script.Parent.Parent.Scenes.Scene_Third),
 })
 
 local Player = Players.LocalPlayer
@@ -30,8 +32,8 @@ local ActiveSceneModule: TScene.TScene?
 local InputBeganConnection: RBXScriptConnection?
 
 local function startCharacter(character: TCharacter.TCharacter)
-	character.Humanoid.AutoRotate = true
 	MouseController.HideMouse()
+	CameraController.AutoRotate = true
 	CameraController.DisableCinematicCamera()
 	TweensController.SetImmobile(false)
 end
@@ -140,8 +142,7 @@ HealthController.OnRevived:Connect(function()
 		if secondSpawn then character.HumanoidRootPart.CFrame = secondSpawn.WorldCFrame end
 	end
 
-	CameraController.DisableCinematicCamera()
-	startCharacter(character)
+	TeleportController.Teleport(ELocations.Dungeon)
 end)
 
 return Ignis.Register(SceneController)

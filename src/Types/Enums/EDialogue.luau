@@ -172,5 +172,7 @@ return table.freeze({
 	-- The new demon king grabs his trident and throws it to the new hero.
 	-- Then the new hero dies, and after some seconds of silence it's body gets eaten by a white flame.
 
+	Third_NewDemonKing_4 = [[The next vessel of god... it starts again.]],
+
 	-- Then the screen goes black and the credits start rolling.
 })

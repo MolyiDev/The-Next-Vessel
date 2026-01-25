@@ -1,4 +1,6 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterPlayer = game:GetService("StarterPlayer")
+local scaleNumber = require(StarterPlayer.StarterPlayerScripts.Client.UI.Components.scaleNumber)
 local Fluid = require(ReplicatedStorage.Shared.Utils.Fluid)
 local Tools = require(ReplicatedStorage.Shared.Utils.Tools)
 local EAssets = require(ReplicatedStorage.Types.Enums.EAssets)
@@ -38,7 +40,12 @@ local function getCooldownTransparency(progress: number)
 	})
 end
 
-local function abilityComponent(props: Ability, globalTransparency: Fluid.Source<number>)
+local function abilityComponent(
+	props: Ability,
+	globalTransparency: Fluid.Source<number>,
+	sliceScale: Fluid.Source<number>,
+	strokeScale: Fluid.Source<number>
+)
 	local sweepTransparency = derive(function()
 		return getCooldownTransparency(props.Cooldown())
 	end)
@@ -73,7 +80,7 @@ local function abilityComponent(props: Ability, globalTransparency: Fluid.Source
 			ScaleType = Enum.ScaleType.Slice,
 			Size = UDim2.fromScale(1, 1),
 			SliceCenter = Rect.new(24, 24, 24, 24),
-			SliceScale = 2,
+			SliceScale = sliceScale,
 			ZIndex = 1,
 
 			create("ImageLabel")({
@@ -143,7 +150,7 @@ local function abilityComponent(props: Ability, globalTransparency: Fluid.Source
 					TextScaled = true,
 					TextYAlignment = Enum.TextYAlignment.Bottom,
 					ZIndex = 5,
-					create("UIStroke")({ Thickness = 2, Transparency = strokeTransparency }),
+					create("UIStroke")({ Thickness = strokeScale, Transparency = strokeTransparency }),
 				}),
 			})
 			else nil,
@@ -154,6 +161,8 @@ return function(): AbilitiesUIReturn
 	local transparencyTarget = source(1)
 	local transparency = spring(transparencyTarget, 10, 0.8)
 
+	local sliceScale = scaleNumber(2)
+	local strokeScale = scaleNumber(2)
 	local abilitiesMap = source({} :: { [number]: Ability })
 	local nextId = 0
 
@@ -181,7 +190,7 @@ return function(): AbilitiesUIReturn
 			}),
 
 			for_values(abilitiesMap, function(abilityData)
-				return abilityComponent(abilityData, transparency)
+				return abilityComponent(abilityData, transparency, sliceScale, strokeScale)
 			end),
 		}),
 	})

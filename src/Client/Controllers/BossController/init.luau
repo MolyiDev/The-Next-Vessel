@@ -2,6 +2,7 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TimeController = require(script.Parent.TimeController)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local jecs = require(ReplicatedStorage.Packages.jecs)
 local Components = require(ReplicatedStorage.Shared.ECS.Components)
@@ -42,7 +43,7 @@ BossController.OnDamaged = Signal.new() :: Signal.Signal<number, number, number>
 BossController.OnHealed = Signal.new() :: Signal.Signal<number, number, number> -- old, new, heal
 BossController.OnHealthChanged = Signal.new() :: Signal.Signal<number, number> -- old, new
 BossController.OnMaxHealthChanged = Signal.new() :: Signal.Signal<number, number> -- old, new
-BossController.Difficulty = 20
+BossController.ParryEnabled = true
 
 function BossController.Reset()
 	HumanoidRootPart.CFrame = DEFAULT_POSITION
@@ -79,18 +80,9 @@ function BossController.IsDead()
 	return IsDead
 end
 
-function BossController.CanParryProjectile(speed: number)
-	-- Example: (Difficulty * 15) / Speed
-	-- If Diff 5, Speed 50  -> (75/50)  = 1.5 (150% chance - Guaranteed)
-	-- If Diff 5, Speed 100 -> (75/100) = 0.75 (75% chance)
-	-- If Diff 1, Speed 100 -> (15/100) = 0.15 (15% chance)
-
-	local parryChance = (BossController.Difficulty * 15) / math.max(speed, 1)
-
-	parryChance = math.clamp(parryChance, 0.1, 0.95)
-	local canParry = math.random() < parryChance
-
-	return canParry
+function BossController.CanParryProjectile()
+	local currentMinute = math.floor(TimeController.Timer / 60)
+	return currentMinute < 5 and BossController.ParryEnabled
 end
 
 function BossController.SuccessfulParry() end

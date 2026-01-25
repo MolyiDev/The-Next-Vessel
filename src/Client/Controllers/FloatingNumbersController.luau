@@ -67,7 +67,7 @@ function FloatingNumbersController.Add(position: Vector3, amount: number, type: 
 	}, {
 		label,
 		position + Vector3.new(0, 2, 0),
-		Vector3.new(math.random(-1, 1), 5, math.random(-1, 1)), -- Float up/scatter
+		Vector3.new(math.random(-1, 1), 5, math.random(-1, 1)),
 		0,
 		1,
 	})

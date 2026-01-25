@@ -15,13 +15,17 @@ local ParryController = require(script.Parent.ParryController)
 local SoundsController = require(script.Parent.SoundsController)
 local TargetController = require(script.Parent.TargetController)
 local TimeController = require(script.Parent.TimeController)
+local TweensController = require(script.Parent.TweensController)
+local UpgradesController = require(script.Parent.UpgradesController)
 local jecs = require(ReplicatedStorage.Packages.jecs)
 local Components = require(ReplicatedStorage.Shared.ECS.Components)
 local WorldRef = require(ReplicatedStorage.Shared.ECS.References.WorldRef)
 local Tags = require(ReplicatedStorage.Shared.ECS.Tags)
 local World = require(ReplicatedStorage.Shared.ECS.Worlds.World)
 local ObjectPooler = require(ReplicatedStorage.Shared.Utils.ObjectPooler)
+local Promise = require(ReplicatedStorage.Shared.Utils.Promise)
 local ESounds = require(ReplicatedStorage.Types.Enums.ESounds)
+local EUpgrades = require(ReplicatedStorage.Types.Enums.EUpgrades)
 local TCharacter = require(ReplicatedStorage.Types.TCharacter)
 
 type Projectile = {
@@ -42,10 +46,14 @@ type SpellBreak = {
 	SpellBreak: Sound,
 } & Attachment
 
-local PARRY_STRENGTH = 4
+local PARRY_STRENGTH = 10
 local MAX_PROJECTILES = 80
 local SENDER_PLAYER_SPHERE_COLOR = Color3.fromRGB(1, 122, 173)
 local SENDER_PLAYER_EFFECT_COLOR = ColorSequence.new(Color3.fromRGB(12, 255, 239))
+
+local SENDER_PLAYER_DEMON_SPHERE_COLOR = Color3.fromRGB(163, 26, 173)
+local SENDER_PLAYER_DEMON_EFFECT_COLOR = ColorSequence.new(Color3.fromRGB(255, 1, 132))
+
 local SENDER_ENEMY_SPHERE_COLOR = Color3.fromRGB(173, 0, 66)
 local SENDER_ENEMY_EFFECT_COLOR = ColorSequence.new(Color3.new(1, 0, 0))
 
@@ -63,7 +71,8 @@ RayParams.FilterType = Enum.RaycastFilterType.Exclude
 local ProjectileController = {}
 ProjectileController.ESender = {
 	Player = 0,
-	Enemy = 1,
+	PlayerDemon = 1,
+	Enemy = 2,
 }
 ProjectileController.ProjectileCount = 0
 ProjectileController.ProjectilesSpawnLow = CollectionService:GetTagged("ProjectilesSpawnLow")[1] :: BasePart
@@ -81,13 +90,20 @@ local function spawnProjectileInternal(
 	radius: number,
 	sender: number,
 	damage: number,
-	health: number
+	health: number,
+	existingModel: Projectile?,
+	dontAddSafeBoss: boolean?
 )
-	if sender ~= ProjectileController.ESender.Player and ProjectileController.ProjectileCount >= MAX_PROJECTILES then
-		return
+	local isPlayer = sender == ProjectileController.ESender.Player
+
+	if not existingModel then
+		if not isPlayer and ProjectileController.ProjectileCount >= MAX_PROJECTILES then return end
 	end
 
-	local model = ProjectilePool:Get() :: Projectile
+	local model = existingModel or ProjectilePool:Get() :: Projectile
+
+	if not existingModel then model:ScaleTo(1) end
+
 	local projectileEntity = WorldRef:EntityRef(model)
 	local root = model.Sphere.Root
 	local initialCF = CFrame.lookAt(initialPos, direction)
@@ -123,10 +139,17 @@ local function spawnProjectileInternal(
 
 	components[#components + 1] = Tags.Projectile
 
-	local isPlayer = sender == ProjectileController.ESender.Player
-	local sphereColor = if isPlayer then SENDER_PLAYER_SPHERE_COLOR else SENDER_ENEMY_SPHERE_COLOR
-	local effectColor = if isPlayer then SENDER_PLAYER_EFFECT_COLOR else SENDER_ENEMY_EFFECT_COLOR
-	local safeTag = if isPlayer then Tags.SafePlayer else Tags.SafeEnemy
+	local sphereColor = if sender == ProjectileController.ESender.Player
+		then SENDER_PLAYER_SPHERE_COLOR
+		elseif sender == ProjectileController.ESender.PlayerDemon then SENDER_PLAYER_DEMON_SPHERE_COLOR
+		else SENDER_ENEMY_SPHERE_COLOR
+
+	local effectColor = if sender == ProjectileController.ESender.Player
+		then SENDER_PLAYER_EFFECT_COLOR
+		elseif sender == ProjectileController.ESender.PlayerDemon then SENDER_PLAYER_DEMON_EFFECT_COLOR
+		else SENDER_ENEMY_EFFECT_COLOR
+
+	local safeTag = if isPlayer or dontAddSafeBoss then Tags.SafePlayer else Tags.SafeEnemy
 
 	model.Sphere.Color = sphereColor
 	root.Glow.Color = effectColor
@@ -135,7 +158,7 @@ local function spawnProjectileInternal(
 
 	components[#components + 1] = safeTag
 
-	root.CFrame = initialCF
+	if not existingModel then root.CFrame = initialCF end
 
 	task.defer(function()
 		model.Sphere.Root.Trail.Enabled = true
@@ -144,6 +167,142 @@ local function spawnProjectileInternal(
 	ProjectileController.ProjectileCount += 1
 
 	jecs.bulk_insert(World, projectileEntity, components, values)
+end
+
+function ProjectileController.ChargeProjectile(
+	sender: number,
+	chargeDuration: number,
+	startScale: number,
+	endScale: number,
+	projectileSpeed: number,
+	projectileDamage: number,
+	dontAddSafeBoss: boolean?
+)
+	local isPlayer = sender == ProjectileController.ESender.Player or sender == ProjectileController.ESender.PlayerDemon
+
+	return Promise.new(function(resolve, reject, onCancel)
+		local sourceRoot: BasePart?
+
+		if isPlayer then
+			local char = Player.Character
+			sourceRoot = if char then char.PrimaryPart else nil
+		else
+			local rig = BossController.GetRig()
+			sourceRoot = if rig then rig.PrimaryPart else nil
+		end
+
+		if not sourceRoot then return reject("No Source Root found for Charge") end
+
+		local model = ProjectilePool:Get() :: Projectile
+		model:ScaleTo(startScale)
+
+		local sphereColor = if sender == ProjectileController.ESender.Player
+			then SENDER_PLAYER_SPHERE_COLOR
+			elseif sender == ProjectileController.ESender.PlayerDemon then SENDER_PLAYER_DEMON_SPHERE_COLOR
+			else SENDER_ENEMY_SPHERE_COLOR
+
+		local effectColor = if sender == ProjectileController.ESender.Player
+			then SENDER_PLAYER_EFFECT_COLOR
+			elseif sender == ProjectileController.ESender.PlayerDemon then SENDER_PLAYER_DEMON_EFFECT_COLOR
+			else SENDER_ENEMY_EFFECT_COLOR
+
+		model.Sphere.Color = sphereColor
+		model.Sphere.Root.Glow.Color = effectColor
+		model.Sphere.Root.Sparks.Color = effectColor
+		model.Sphere.Root.Trail.Color = effectColor
+		model.Sphere.Root.Trail.Enabled = false
+
+		SoundsController.Play(ESounds.MagicCharge, model.Sphere.Root)
+
+		local t = 0
+		local connection: RBXScriptConnection?
+
+		connection = RunService.Heartbeat:Connect(function(dt)
+			t += dt
+
+			if not sourceRoot or not sourceRoot.Parent then
+				if connection then
+					connection:Disconnect()
+					connection = nil
+				end
+
+				reject("Source died during charge")
+				return
+			end
+
+			if t >= chargeDuration then
+				if connection then
+					connection:Disconnect()
+					connection = nil
+				end
+
+				resolve(model)
+				return
+			end
+
+			local alpha = math.clamp(t / chargeDuration, 0, 1)
+			local currentScale = startScale + (endScale - startScale) * alpha
+			model:ScaleTo(currentScale)
+
+			local heightMult = if isPlayer then 1.2 else 1.5
+			local baseOffset = if isPlayer then 6 else 10
+
+			local offset = Vector3.new(0, baseOffset + (currentScale * heightMult), 0)
+			model.Sphere.Root.CFrame = CFrame.new(sourceRoot.Position + offset)
+		end)
+
+		onCancel(function()
+			ProjectilePool:Return(model)
+
+			if connection then
+				connection:Disconnect()
+				connection = nil
+			end
+		end)
+	end):andThen(function(model: Projectile)
+		local startPos = model.Sphere.Root.Position
+
+		local targetRoot = nil
+		local direction = Vector3.zAxis
+
+		if isPlayer then
+			local bossRig = BossController.GetRig()
+			targetRoot = if bossRig then bossRig.PrimaryPart else nil
+
+			if targetRoot then
+				direction = (targetRoot.Position - startPos).Unit
+			else
+				direction = Workspace.CurrentCamera.CFrame.LookVector
+			end
+		else
+			local char = Player.Character
+			targetRoot = if char then char.PrimaryPart else nil
+
+			if targetRoot then
+				direction = (targetRoot.Position - startPos).Unit
+			else
+				local bossRig = BossController.GetRig()
+				direction = if bossRig and bossRig.PrimaryPart
+					then bossRig.PrimaryPart.CFrame.LookVector
+					else Vector3.zAxis
+			end
+		end
+
+		spawnProjectileInternal(
+			startPos,
+			direction,
+			targetRoot,
+			projectileSpeed,
+			endScale,
+			sender,
+			projectileDamage,
+			1000,
+			model,
+			dontAddSafeBoss
+		)
+
+		SoundsController.Play(ESounds.MagicShootBig, model.Sphere.Root)
+	end)
 end
 
 function ProjectileController.AddProjectile(
@@ -195,6 +354,7 @@ function ProjectileController.BreakProjectile(projectileEntity: jecs.Entity)
 
 	local senderColor = if sender == ProjectileController.ESender.Player
 		then SENDER_PLAYER_EFFECT_COLOR
+		elseif sender == ProjectileController.ESender.PlayerDemon then SENDER_PLAYER_DEMON_EFFECT_COLOR
 		else SENDER_ENEMY_EFFECT_COLOR
 
 	local clone = ProjectileBreakEffect:Clone()
@@ -226,6 +386,7 @@ end
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp then return end
 	if input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
+	if TweensController.IsImmobile or HealthController.IsDead() then return end
 
 	local root = if Player.Character then Player.Character.PrimaryPart else nil
 	if not root then return end
@@ -236,7 +397,8 @@ UserInputService.InputBegan:Connect(function(input, gp)
 	local dir = Workspace.CurrentCamera.CFrame.LookVector
 	local speed = 90
 	local radius = 2.5
-	local dmg = 1
+
+	local dmg = 1 + UpgradesController.GetUpgradeLevel(EUpgrades.Power)
 	local health = 1
 
 	ProjectileController.AddProjectile(startPos, dir, speed, radius, ProjectileController.ESender.Player, dmg, health)
@@ -306,37 +468,68 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 		local dmg = World:get(entity, Components.Damage) or 0
 
 		local hitEnemy = false
-		if not World:has(entity, Tags.SafeEnemy) then -- Only player projectiles hit enemies
+		if not World:has(entity, Tags.SafeEnemy) then
 			EnemiesController.SpatialHash:QuerySphereAsPoints(
 				newPos.X,
 				newPos.Y,
 				newPos.Z,
 				radius * 2,
 				function(enemyEntity)
-					if hitEnemy then return end -- Only hit one enemy per frame per projectile
+					if hitEnemy then return end
 
 					local enemyCF = World:get(enemyEntity, Components.CFrame)
 					local enemyRadius = World:get(enemyEntity, Components.Radius) or 2
 					if not enemyCF then return end
 
-					-- Verify exact distance since Hash is coarse/broadphase
 					local distSq = (enemyCF.Position - newPos).Magnitude ^ 2
 					local combinedRadius = radius + enemyRadius
 
-					if distSq <= combinedRadius * combinedRadius then
-						hitEnemy = true
+					if distSq > combinedRadius * combinedRadius then return end
 
-						EnemiesController.HitEnemy(enemyEntity, dmg)
+					hitEnemy = true
 
-						FloatingNumbersController.Add(
-							enemyCF.Position,
-							dmg,
-							FloatingNumbersController.ENumberType.DamageEnemy
+					EnemiesController.HitEnemy(enemyEntity, dmg)
+
+					FloatingNumbersController.Add(
+						enemyCF.Position,
+						dmg,
+						FloatingNumbersController.ENumberType.DamageEnemy
+					)
+
+					local bounceLevel = UpgradesController.GetUpgradeLevel(EUpgrades.Bounces)
+					local bounces = World:get(entity, Components.Bounces) or 0
+
+					if bounceLevel > 0 and bounces < bounceLevel then
+						local bestTarget = nil
+						local bestDist = 20
+
+						EnemiesController.SpatialHash:QuerySphereAsPoints(
+							newPos.X,
+							newPos.Y,
+							newPos.Z,
+							bestDist,
+							function(other)
+								if other == enemyEntity then return end
+								local otherCF = World:get(other, Components.CFrame)
+								if not otherCF then return end
+
+								local d = (otherCF.Position - newPos).Magnitude
+								if d < bestDist then
+									bestDist = d
+									bestTarget = otherCF.Position
+								end
+							end
 						)
 
-						-- Visual break
-						ProjectileController.BreakProjectile(entity)
+						if bestTarget then
+							World:set(entity, Components.Bounces, bounces + 1)
+							World:set(entity, Components.Direction, (bestTarget - newPos).Unit)
+							World:remove(entity, Components.Target)
+							return
+						end
 					end
+
+					ProjectileController.BreakProjectile(entity)
 				end
 			)
 		end
@@ -350,7 +543,7 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 			local closestPoint = currentPos + (displacement * clampedT)
 
 			if (closestPoint - bossRoot.Position).Magnitude < 6 then
-				if BossController.CanParryProjectile(speed) then
+				if BossController.CanParryProjectile() then
 					local health = (World:get(entity, Components.Health) or 0) - 1
 
 					if health <= 0 then

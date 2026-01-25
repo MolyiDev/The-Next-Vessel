@@ -8,4 +8,7 @@ return table.freeze({
 	PlayerJump = 6,
 	MagicShoot = 7,
 	MagicReload = 8,
+	MagicCharge = 9,
+	MagicShootBig = 10,
+	Whispers = 11,
 })

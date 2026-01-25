@@ -2,6 +2,7 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
+local BlackoutController = require(script.Parent.BlackoutController)
 local ELocations = require(ReplicatedStorage.Types.Enums.ELocations)
 local TCharacter = require(ReplicatedStorage.Types.TCharacter)
 local CameraController = require(script.Parent.CameraController)
@@ -17,19 +18,23 @@ local TeleportController = {}
 function TeleportController.Teleport(location: number)
 	local character = Player.Character :: TCharacter.TCharacter
 
-	if location == ELocations.SoulRealm then
-		CameraController.EnableCinematicCamera()
-		Camera.CameraSubject = SoulRealmCamera
-		CameraController.UnlockCamera()
-		TweensController.SetImmobile(false, 0.01)
-	elseif character then
-		CameraController.DisableCinematicCamera()
-		MouseController.HideMouse()
-		CameraController.LockCamera()
-		TweensController.SetImmobile(false, 0.01)
-	end
-end
+	return BlackoutController.Transparency(0):andThen(function()
+		if location == ELocations.SoulRealm then
+			CameraController.EnableCinematicCamera()
+			Camera.CameraSubject = SoulRealmCamera
+			CameraController.UnlockCamera()
+			TweensController.SetImmobile(false, 0.01)
+		elseif character then
+			CameraController.DisableCinematicCamera()
+			MouseController.HideMouse()
+			CameraController.LockCamera()
+			TweensController.SetImmobile(false, 0.01)
 
-function TeleportController.CharacterTeleport() end
+			Camera.CFrame = CFrame.new(Camera.CameraSubject.Position :: any) * CFrame.Angles(0, math.rad(-90), 0)
+		end
+
+		return BlackoutController.Transparency(1)
+	end)
+end
 
 return TeleportController

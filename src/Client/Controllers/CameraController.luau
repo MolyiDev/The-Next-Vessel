@@ -41,6 +41,7 @@ local Humanoid: Humanoid
 local HumanoidRootPart: BasePart
 
 local CameraController = {}
+CameraController.AutoRotate = false
 CameraController.CameraLocked = false
 CameraController.CinematicCameraActive = false
 CameraController.ShakeMultiplier = 1
@@ -111,12 +112,11 @@ local function computeShakeOffset(): CFrame
 		end
 
 		local alpha = 1 - (elapsed / shake.Duration)
-		local currentMag = shake.Magnitude * alpha * CameraController.ShakeMultiplier -- Applied here
+		local currentMag = shake.Magnitude * alpha * CameraController.ShakeMultiplier
 
 		local freq = 4 / math.max(shake.Roughness, 0.01)
 		local t = now * freq
 
-		-- Calculate Noise
 		local nX = (math.noise(t, shake.Seed, 1) * 2)
 		local nY = (math.noise(t, shake.Seed, 2) * 2)
 		local nZ = (math.noise(t, shake.Seed, 3) * 2)
@@ -181,7 +181,7 @@ CameraController.OnCharacterAdded = function(character: TCharacter.TCharacter, c
 		Camera.CFrame = Camera.CFrame * shakeCF * CAMERA_OFFSET
 		local _, y, _ = Camera.CFrame:ToOrientation()
 
-		if Humanoid.AutoRotate then
+		if CameraController.AutoRotate then
 			character.HumanoidRootPart.CFrame = character.HumanoidRootPart.CFrame:Lerp(
 				CFrame.new(character.HumanoidRootPart.Position) * CFrame.Angles(0, y, 0),
 				math.clamp(dt * 10, 0, 1)

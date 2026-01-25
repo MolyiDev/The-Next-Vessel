@@ -47,7 +47,6 @@ local Camera = Workspace.CurrentCamera
 local Blur = Lighting.Blur
 local ColorCorrection = Lighting.ColorCorrection
 local Humanoid: Humanoid?
--- TODO: Add camera shaker
 local UpdateConnection: RBXScriptConnection?
 
 local CameraInfo: TInfo = {

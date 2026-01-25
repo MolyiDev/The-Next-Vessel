@@ -1,5 +1,7 @@
 local CollectionService = game:GetService("CollectionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local StarterPlayer = game:GetService("StarterPlayer")
+local TargetController = require(StarterPlayer.StarterPlayerScripts.Client.Controllers.TargetController)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local TimeController = require(script.Parent.Parent.Controllers.TimeController)
 local AbilitiesController = require(script.Parent.Parent.Controllers.AbilitiesController)
@@ -23,7 +25,6 @@ local EDialogue = require(ReplicatedStorage.Types.Enums.EDialogue)
 local EFlames = require(ReplicatedStorage.Types.Enums.EFlames)
 local ELocations = require(ReplicatedStorage.Types.Enums.ELocations)
 local EScenes = require(ReplicatedStorage.Types.Enums.EScenes)
-local EUpgrades = require(ReplicatedStorage.Types.Enums.EUpgrades)
 local TScene = require(ReplicatedStorage.Types.TScene)
 
 type Scene = {
@@ -53,6 +54,7 @@ function Scene_Second.Start()
 	HotbarController.Appear()
 	AbilitiesController.Appear()
 	BossLifebarController.Appear()
+	TargetController.Appear()
 	TimeController.AppearTimer()
 
 	Scene_Second.IsActive = true
@@ -78,6 +80,9 @@ function Scene_Second.Start()
 		end)
 		:andThen(function()
 			return DialogueController.Talk({ Id = ECharacters.DemonKing, Dialogue = demonDialogueStart })
+		end)
+		:andThen(function()
+			return Promise.reject(EScenes.Third)
 		end)
 		:andThen(function()
 			Scene_Second.ShouldRestart = false
@@ -172,18 +177,21 @@ function Scene_Second.Start()
 				return DialogueController.Talk({ Id = ECharacters.DemonKing, Dialogue = demonDialogueFinish })
 			else
 				--  The boss dies
-				return EScenes.Fourth
+				return Promise.reject(EScenes.Third)
 			end
 		end)
 		:andThen(function()
-			HotbarController.Disappear()
 			BossLifebarController.Disappear()
-			ProjectileController.Cleanup()
+			HotbarController.Disappear()
 			AbilitiesController.Disappear()
 			TimeController.DisappearTimer()
-			EnemiesController.Cleanup()
-			TeleportController.Teleport(ELocations.SoulRealm)
-			return Promise.delay(1)
+
+			return TeleportController.Teleport(ELocations.SoulRealm):andThen(function()
+				ProjectileController.Cleanup()
+				EnemiesController.Cleanup()
+
+				return Promise.delay(0.5)
+			end)
 		end)
 		:andThen(function()
 			FlamesController.Appear(EFlames.WhiteFlame)
@@ -193,15 +201,8 @@ function Scene_Second.Start()
 			return DialogueController.Talk({ Id = ECharacters.God, Dialogue = whiteDialogueStart })
 		end)
 		:andThen(function()
-			-- Depending on the attacks that killed the player different wishes will appear on death:
-			-- If the player died because of an attack that is deflectable and doesnt have the deflect then the wish 'Be able to deflect attacks' will appear
-			-- If the player died because of an attack that is not deflectable and doesnt have the dodge then the wish 'Be able to dodge attacks' will appear
-			-- If the player died while the boss was 'hardened' and doesnt have the ability to break the 'hardened skin' then the wish 'Be able to break harden' will appear
-			-- If the player died because of the boss poison and doesnt have the poison resistance  then the wish 'Be able to withstand poison' will appear
-			-- If the player died after failing a parry and doesnt have the ability to block then the wish 'Be able to block' will appear
 			local upgrades = {}
 
-			if not UpgradesController.HasUpgrade(EUpgrades.Dash) then upgrades[#upgrades + 1] = EUpgrades.Dash end
 			return UpgradesController.Show(upgrades, true)
 		end)
 		:andThen(function(upgradeId: number)
@@ -216,6 +217,8 @@ function Scene_Second.Start()
 			return EScenes.Second
 		end)
 		:catch(function(err)
+			if err == EScenes.Third then return err end
+
 			warn(`[Scene_Second] Error: {err}`)
 		end)
 
@@ -234,6 +237,7 @@ function Scene_Second.Stop()
 	BossLifebarController.Disappear()
 	AbilitiesController.Disappear()
 	TimeController.DisappearTimer()
+	TargetController.Disappear()
 	Scene_Second.Corruption = math.min(Scene_Second.Corruption + 1, 5)
 
 	if Scene_Second.SelectedUpgrade then

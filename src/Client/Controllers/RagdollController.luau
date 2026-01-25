@@ -1,4 +1,5 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local CameraController = require(script.Parent.CameraController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local jecs = require(ReplicatedStorage.Packages.jecs)
 local Components = require(ReplicatedStorage.Shared.ECS.Components)
@@ -109,9 +110,9 @@ function RagdollController.Ragdoll()
 	if RagdollController.IsRagdoll or not Humanoid then return end
 
 	RagdollController.IsRagdoll = true
+	CameraController.AutoRotate = false
 
 	Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
-	Humanoid.AutoRotate = false
 
 	ReplaceJoints()
 
@@ -122,9 +123,9 @@ function RagdollController.Unragdoll()
 	if not RagdollController.IsRagdoll or not Humanoid then return end
 
 	RagdollController.IsRagdoll = false
+	CameraController.AutoRotate = true
 
 	Humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
-	Humanoid.AutoRotate = true
 
 	ResetJoints()
 end

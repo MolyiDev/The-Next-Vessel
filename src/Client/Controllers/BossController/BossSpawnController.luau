@@ -10,8 +10,9 @@ local Player = Players.LocalPlayer
 local BossSpawnController = {}
 local nextSpawnTime = 0
 
-function BossSpawnController.ProjectilesAtSceneStart(damage: number, speedMultiplier: number?)
+function BossSpawnController.ProjectilesAtSceneStart(damage: number, speedMultiplier: number?, sender: number?)
 	speedMultiplier = speedMultiplier or 1
+	sender = sender or ProjectileController.ESender.Enemy
 	local bossCf = BossController.GetCFrame()
 	local bossPosition = bossCf.Position - bossCf.LookVector
 	bossCf -= bossCf.LookVector
@@ -34,7 +35,7 @@ function BossSpawnController.ProjectilesAtSceneStart(damage: number, speedMultip
 			character.PrimaryPart,
 			120 * speedMultiplier :: any,
 			2.5,
-			ProjectileController.ESender.Enemy,
+			sender :: any,
 			damage
 		)
 	end
@@ -61,7 +62,8 @@ function BossSpawnController.ProjectilesAtSceneThird(damage: number, speedMultip
 			120 * speedMultiplier :: any,
 			2.5,
 			ProjectileController.ESender.Enemy,
-			damage
+			damage,
+			math.random(1, 6)
 		)
 	end
 end

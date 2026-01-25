@@ -9,6 +9,7 @@ return table.freeze({
 	ProjectileIcon = "rbxassetid://119823473015159",
 
 	KeyE = "rbxassetid://99658377169775",
+	Key1 = "rbxassetid://99658377169775",
 	KeyQ = "rbxassetid://71460978786979",
 	KeyLeftClick = "rbxassetid://73843347915091",
 	KeyRightClick = "rbxassetid://101465398209899",

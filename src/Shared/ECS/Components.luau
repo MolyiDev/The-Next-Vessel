@@ -23,6 +23,7 @@ local Components = {
 	Damage = jecs.component() :: jecs.Id<number>,
 	Type = jecs.component() :: jecs.Id<number>,
 	Sender = jecs.component() :: jecs.Id<number>,
+	Bounces = jecs.component() :: jecs.Id<number>,
 
 	-- Damage Numbers
 	TextLabel = jecs.component() :: jecs.Id<TextLabel>,

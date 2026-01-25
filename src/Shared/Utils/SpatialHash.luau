@@ -137,7 +137,6 @@ local max = math.max
 local table_create = table.create
 local table_clear = table.clear
 
--- Large primes for spatial hashing to minimize collisions
 local P1 = 73856093
 local P2 = 19349663
 local P3 = 83492791
@@ -244,7 +243,6 @@ local function sphereAABBRelation(
 	cz: number,
 	r2: number
 ): number
-	-- outside if AABB is farther than r from sphere center
 	local dx = 0
 	if cx < minx then
 		dx = minx - cx
@@ -266,7 +264,6 @@ local function sphereAABBRelation(
 
 	if dx * dx + dy * dy + dz * dz > r2 then return ERelation.Outside end
 
-	-- inside if all eight corners inside the sphere
 	local function inside(x: number, y: number, z: number): boolean
 		local rx, ry, rz = x - cx, y - cy, z - cz
 		return rx * rx + ry * ry + rz * rz <= r2
@@ -302,11 +299,9 @@ local function aabbRelation(
 	qminz: number,
 	qmaxz: number
 ): number
-	-- outside if disjoint
 	if maxx < qminx or minx > qmaxx or maxy < qminy or miny > qmaxy or maxz < qminz or minz > qmaxz then
 		return ERelation.Outside
 	end
-	-- inside if fully contained
 	if minx >= qminx and maxx <= qmaxx and miny >= qminy and maxy <= qmaxy and minz >= qminz and maxz <= qmaxz then
 		return ERelation.Inside
 	end
@@ -508,7 +503,6 @@ function SpatialHash.AddAABBRecursively(self: SpatialHash, e: EntityId, pos: vec
 	self.Records[e] =
 		{ x = pos.x, y = pos.y, z = pos.z, halfx = hx, halfy = hy, halfz = hz, shape = EShape.AABB } :: RecordAABB
 
-	-- fine
 	do
 		local minIx, minIy, minIz, maxIx, maxIy, maxIz = rangeAABB(pos.x, pos.y, pos.z, hx, hy, hz, self.CELL_SIZE)
 		for ix = minIx, maxIx do
@@ -519,7 +513,6 @@ function SpatialHash.AddAABBRecursively(self: SpatialHash, e: EntityId, pos: vec
 			end
 		end
 	end
-	-- coarse
 	do
 		local minIx, minIy, minIz, maxIx, maxIy, maxIz = rangeAABB(pos.x, pos.y, pos.z, hx, hy, hz, self.COARSE_SIZE)
 		for ix = minIx, maxIx do
@@ -537,7 +530,6 @@ function SpatialHash.AddSphereRecursively(self: SpatialHash, e: EntityId, pos: v
 	if radius < 0 then radius = 0 end
 	self.Records[e] = { x = pos.x, y = pos.y, z = pos.z, radius = radius, shape = EShape.Sphere } :: RecordSphere
 
-	-- fine
 	do
 		local minIx, minIy, minIz, maxIx, maxIy, maxIz = rangeSphere(pos.x, pos.y, pos.z, radius, self.CELL_SIZE)
 		for ix = minIx, maxIx do
@@ -548,7 +540,6 @@ function SpatialHash.AddSphereRecursively(self: SpatialHash, e: EntityId, pos: v
 			end
 		end
 	end
-	-- coarse
 	do
 		local minIx, minIy, minIz, maxIx, maxIy, maxIz = rangeSphere(pos.x, pos.y, pos.z, radius, self.COARSE_SIZE)
 		for ix = minIx, maxIx do
@@ -618,7 +609,6 @@ function SpatialHash.RemoveRecursively(self: SpatialHash, entity: EntityId)
 
 	if record.shape == EShape.Sphere then
 		local r = (record :: RecordSphere).radius
-		-- fine
 		do
 			local minIx, minIy, minIz, maxIx, maxIy, maxIz =
 				rangeSphere(record.x, record.y, record.z, r, self.CELL_SIZE)
@@ -630,7 +620,6 @@ function SpatialHash.RemoveRecursively(self: SpatialHash, entity: EntityId)
 				end
 			end
 		end
-		-- coarse
 		do
 			local minIx, minIy, minIz, maxIx, maxIy, maxIz =
 				rangeSphere(record.x, record.y, record.z, r, self.COARSE_SIZE)
@@ -644,7 +633,6 @@ function SpatialHash.RemoveRecursively(self: SpatialHash, entity: EntityId)
 		end
 	elseif record.shape == EShape.AABB then
 		local a = record :: RecordAABB
-		-- fine
 		do
 			local minIx, minIy, minIz, maxIx, maxIy, maxIz =
 				rangeAABB(record.x, record.y, record.z, a.halfx, a.halfy, a.halfz, self.CELL_SIZE)
@@ -656,7 +644,6 @@ function SpatialHash.RemoveRecursively(self: SpatialHash, entity: EntityId)
 				end
 			end
 		end
-		-- coarse
 		do
 			local minIx, minIy, minIz, maxIx, maxIy, maxIz =
 				rangeAABB(record.x, record.y, record.z, a.halfx, a.halfy, a.halfz, self.COARSE_SIZE)
@@ -669,7 +656,6 @@ function SpatialHash.RemoveRecursively(self: SpatialHash, entity: EntityId)
 			end
 		end
 	else
-		-- points
 		return SpatialHash.Remove(self, entity)
 	end
 

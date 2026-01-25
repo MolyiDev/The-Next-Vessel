@@ -18,6 +18,8 @@ local MIN_SIZE_PX = 10 -- Minimum size in pixels (so it doesn't vanish completel
 local MAX_SIZE_PX = 100 -- Maximum size in pixels (so it doesn't cover entire screen up close)
 local ARROW_TARGET = "rbxassetid://129623063194632"
 local HOVER_UPDATE_RATE = 0.05
+local BASE_TRANSPARENCY = 0.25
+local FADE_SPEED = 10
 
 local Player = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
@@ -25,6 +27,9 @@ local Camera = Workspace.CurrentCamera
 local ArrowsContainer = Tools.CreateGenericScreenGui("DamageNumbers")
 ArrowsContainer.DisplayOrder = -1
 ArrowsContainer.Parent = Player:WaitForChild("PlayerGui")
+
+local CurrentTransparency = 1
+local TargetTransparency = 1
 
 --==[ UI ]==--
 type Reticle = {
@@ -44,14 +49,15 @@ local function CreateReticle(name: string, color: Color3): Reticle
 
 	local corners = {}
 	local rotations = { 0, 90, 180, 270 }
-	-- Offsets to push corners to the edges of the container
+
 	local positions = {
-		UDim2.fromScale(0, 0), -- TL
-		UDim2.fromScale(1, 0), -- TR
-		UDim2.fromScale(1, 1), -- BR
-		UDim2.fromScale(0, 1), -- BL
+		UDim2.fromScale(0, 0), -- topleft
+		UDim2.fromScale(1, 0), -- topright
+		UDim2.fromScale(1, 1), -- bottomright
+		UDim2.fromScale(0, 1), -- bottomleft
 	}
 
+	-- same dirs
 	local anchorPoints = {
 		Vector2.new(0, 0),
 		Vector2.new(1, 0),
@@ -66,7 +72,7 @@ local function CreateReticle(name: string, color: Color3): Reticle
 		img.ImageColor3 = color
 		img.BackgroundTransparency = 1
 		img.Size = UDim2.fromScale(0.3, 0.3)
-		img.ImageTransparency = 0.25
+		img.ImageTransparency = 1
 		img.Position = positions[i]
 		img.AnchorPoint = anchorPoints[i]
 		img.Rotation = rotations[i]
@@ -93,6 +99,14 @@ local HoverTargetEntity: jecs.Entity? = nil
 
 local SelectionStartTime = 0
 local LastHoverCheck = 0
+
+function TargetController.Appear()
+	TargetTransparency = 0
+end
+
+function TargetController.Disappear()
+	TargetTransparency = 1
+end
 
 function TargetController.GetTarget(): (jecs.Entity?, Vector3?)
 	if not CurrentTargetEntity then return nil, nil end
@@ -151,7 +165,6 @@ local function GetClosestEntityToMouse(): jecs.Entity?
 	local bestDist = SELECTION_THRESHOLD_PX
 
 	for entity, cf in World:query(Components.CFrame, Tags.Enemy) do
-		-- Skip if already selected
 		if entity == CurrentTargetEntity then continue end
 
 		local worldPos = cf.Position
@@ -197,6 +210,11 @@ local function GetProjectedSize(dist: number, studs: number): number
 end
 
 local function UpdateReticleVisuals(reticle: Reticle, entity: jecs.Entity, dt: number, isSelected: boolean)
+	if CurrentTransparency >= 0.99 then
+		reticle.Container.Visible = false
+		return
+	end
+
 	local cf = World:get(entity, Components.CFrame)
 	local radius = World:get(entity, Components.Radius) or DEFAULT_RADIUS
 
@@ -217,20 +235,22 @@ local function UpdateReticleVisuals(reticle: Reticle, entity: jecs.Entity, dt: n
 	reticle.Container.Visible = true
 	reticle.Container.Position = UDim2.fromOffset(screenPos.X, screenPos.Y)
 
+	local finalAlpha = BASE_TRANSPARENCY + ((1 - BASE_TRANSPARENCY) * CurrentTransparency)
+	for _, corner in reticle.Corners do
+		corner.ImageTransparency = finalAlpha
+	end
+
 	local basePixelSize = GetProjectedSize(dist, radius * RETICLE_SIZE_MULT)
 
 	if isSelected then
 		local timeActive = os.clock() - SelectionStartTime
 
-		-- Animation 1: Big to Small (Clamp down)
-		-- Starts at 200px size, shrinks to 60px over 0.3 seconds
 		local shrinkFactor = math.clamp(1 - (timeActive * 3), 0, 1)
 		local animMultiplier = 1 + (1.5 * shrinkFactor)
 		local currentSize = basePixelSize * animMultiplier
 
 		reticle.Container.Size = UDim2.fromOffset(currentSize, currentSize)
-		-- Animation 2: Rotation (Infinite Spin)
-		-- Only start spinning once mostly clamped down
+
 		if shrinkFactor < 0.1 then
 			local rotSpeed = 90
 			reticle.Container.Rotation += rotSpeed * dt
@@ -242,21 +262,27 @@ local function UpdateReticleVisuals(reticle: Reticle, entity: jecs.Entity, dt: n
 		reticle.Container.Rotation = 0
 	end
 end
+
 local function targetSystem(rawDt: number)
 	local dt = TimeController.GetDeltaTime(rawDt)
+
+	if math.abs(CurrentTransparency - TargetTransparency) > 0.001 then
+		CurrentTransparency = CurrentTransparency
+			+ (TargetTransparency - CurrentTransparency) * math.min(dt * FADE_SPEED, 1)
+	else
+		CurrentTransparency = TargetTransparency
+	end
+
 	if dt <= 0.001 then return end
 
 	debug.profilebegin("Target")
 
-	-- 1. Update Hover Target (Throttled)
 	if os.clock() - LastHoverCheck > HOVER_UPDATE_RATE then
 		HoverTargetEntity = GetClosestEntityToMouse()
 		LastHoverCheck = os.clock()
 	end
 
-	-- 2. Update Selected Reticle
 	if CurrentTargetEntity then
-		-- Check validity
 		if not World:contains(CurrentTargetEntity) or not World:has(CurrentTargetEntity, Tags.Enemy) then
 			TargetController.OnTargetDestroyed()
 		else
@@ -266,7 +292,6 @@ local function targetSystem(rawDt: number)
 		SelectedReticle.Container.Visible = false
 	end
 
-	-- 3. Update Hover Reticle
 	if HoverTargetEntity and HoverTargetEntity ~= CurrentTargetEntity then
 		if World:contains(HoverTargetEntity) then
 			UpdateReticleVisuals(HoverReticle, HoverTargetEntity, dt, false)

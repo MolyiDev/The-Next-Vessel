@@ -84,6 +84,11 @@ local UPGRADES_LIST = {
 	EUpgrades.TargetGod,
 }
 
+local UPGRADE_DEPENDENCIES = {
+	[EUpgrades.DashGod] = EUpgrades.Dash,
+	[EUpgrades.Bounces] = EUpgrades.TargetGod,
+}
+
 local UPGRADES_RARITIES = {
 	[EUpgrades.Power] = ERarity.Common,
 	[EUpgrades.Health] = ERarity.Common,
@@ -153,6 +158,9 @@ local function fillUpgrades(inputUpgrades: { number }?): { number }
 	for _, upgradeId in UPGRADES_LIST do
 		if table.find(result, upgradeId) then continue end
 
+		local requiredUpgrade = UPGRADE_DEPENDENCIES[upgradeId]
+		if requiredUpgrade and not OwnedUpgrades[requiredUpgrade] then continue end
+
 		local isStackable = STACKABLE_UPGRADES[upgradeId]
 		local isOwned = OwnedUpgrades[upgradeId]
 
@@ -183,8 +191,6 @@ function UpgradesController.AddUpgrade(upgradeId: number)
 		local amountToAdd = config.Amount
 		local newMax = HealthController.GetMaxHealth() + amountToAdd
 		HealthController.SetMaxHealth(newMax)
-	elseif upgradeId == EUpgrades.Power then
-		-- TODO: Update Damage multipliers
 	end
 end
 
