@@ -2,6 +2,7 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local FloatingNumbersController = require(script.Parent.FloatingNumbersController)
 local TimeController = require(script.Parent.TimeController)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local jecs = require(ReplicatedStorage.Packages.jecs)
@@ -107,6 +108,14 @@ function BossController.SetHealth(value: number)
 	if diff < 0 then
 		local damage = math.abs(diff)
 		BossController.OnDamaged:Fire(oldHealth, newHealth, damage)
+
+		FloatingNumbersController.Add(
+			BossController.GetPosition(),
+			value,
+			if value > 999
+				then FloatingNumbersController.ENumberType.Crit
+				else FloatingNumbersController.ENumberType.DamageEnemy
+		)
 	elseif diff > 0 then
 		local healed = diff
 		BossController.OnHealed:Fire(oldHealth, newHealth, healed)

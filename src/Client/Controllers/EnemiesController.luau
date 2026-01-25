@@ -4,6 +4,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
+local Signal = require(ReplicatedStorage.Packages.Signal)
 local DashController = require(script.Parent.DashController)
 local HealthController = require(script.Parent.HealthController)
 local KnockbackController = require(script.Parent.KnockbackController)
@@ -33,7 +34,7 @@ local DOWN_VECTOR = Vector3.yAxis * -50
 local TURN_STRENGTH = 4
 local SEPARATION_RADIUS = 6
 local SEPARATION_FORCE = 1.5
-local MAX_ENEMIES = 40
+local MAX_ENEMIES = 80
 local WALL_MARGIN = 2
 local MIN_GROUND_HEIGHT = 4
 
@@ -64,7 +65,9 @@ EnemiesController.EEnemyType = {
 	Purple = 3, -- Health and Damage and Speed increased x4
 }
 EnemiesController.EnemiesCount = 0
+EnemiesController.EnemiesKilled = 0
 EnemiesController.SpatialHash = SpatialHash.new()
+EnemiesController.OnEnemyDied = Signal.new()
 
 function EnemiesController.OnCharacterAdded(character: TCharacter.TCharacter)
 	RayParams.FilterDescendantsInstances = { character, ProjectilesZone }
@@ -87,18 +90,19 @@ function EnemiesController.SpawnEnemy(
 		model = SpiritGreenPool:Get()
 	elseif type == EnemiesController.EEnemyType.Blue then
 		model = SpiritBluePool:Get()
-		speed = (speed or 1) * 1.5
-		damage = (damage or 1) * 1.5
-	elseif type == EnemiesController.EEnemyType.Yellow then
-		model = SpiritYellowPool:Get()
 		speed = (speed or 1) * 1.75
 		damage = (damage or 1) * 1.75
-		health = (health or 1) * 2
-	else
-		model = SpiritPurplePool:Get()
+		health = (health or 1) * 3
+	elseif type == EnemiesController.EEnemyType.Yellow then
+		model = SpiritYellowPool:Get()
 		speed = (speed or 1) * 2
 		damage = (damage or 1) * 2
-		health = (health or 1) * 3
+		health = (health or 1) * 4
+	else
+		model = SpiritPurplePool:Get()
+		speed = (speed or 1) * 2.5
+		damage = (damage or 1) * 2.5
+		health = (health or 1) * 5
 	end
 
 	local enemyEntity = WorldRef:EntityRef(model)
@@ -189,6 +193,8 @@ function EnemiesController.HitEnemy(entity: jecs.Entity, damage: number)
 			TargetController.SwitchToNextTarget(entity)
 		end
 
+		EnemiesController.EnemiesKilled += 1
+		EnemiesController.OnEnemyDied:Fire()
 		EnemiesController.BreakEnemy(entity)
 	else
 		World:set(entity, Components.Health, newHealth)

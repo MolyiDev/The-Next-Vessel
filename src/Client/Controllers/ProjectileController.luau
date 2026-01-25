@@ -546,7 +546,7 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 				if BossController.CanParryProjectile() then
 					local health = (World:get(entity, Components.Health) or 0) - 1
 
-					if health <= 0 then
+					if health <= 0 or UpgradesController.HasUpgrade(EUpgrades.ParryDuplication) then
 						ProjectileController.BreakProjectile(entity)
 						continue
 					end
@@ -596,7 +596,7 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 			local closestPointOnPath = currentPos + (displacement * clampedT)
 			local distToPath = (characterPos - closestPointOnPath).Magnitude
 
-			if distToPath < (radius * 2.5) then
+			if distToPath < (radius * 2.75) then
 				if ParryController.IsParrying() then
 					local health = (World:get(entity, Components.Health) or 0) - 1
 
@@ -617,26 +617,46 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 					World:add(entity, Tags.SafePlayer)
 					World:remove(entity, Tags.SafeEnemy)
 
+					local finalTarget = nil
+					local baseDirection = camLook
+
 					if targetEntity then
 						local targetAttach = World:get(targetEntity, Components.Attachment)
 						if targetAttach then
-							World:set(entity, Components.Target, targetAttach)
-							local dirToTarget = (targetPos - currentPos).Unit
-							World:set(entity, Components.Direction, dirToTarget)
-						else
-							World:set(entity, Components.Direction, camLook)
+							finalTarget = targetAttach
+							baseDirection = (targetPos - currentPos).Unit
 						end
 					elseif bossRoot then
-						World:set(entity, Components.Target, bossRoot)
-						World:set(entity, Components.Direction, camLook)
-					else
-						World:set(entity, Components.Direction, camLook)
+						finalTarget = bossRoot :: any
+						baseDirection = (bossRoot.Position - currentPos).Unit
 					end
 
+					local directions = {}
+					local dupeLevel = UpgradesController.GetUpgradeLevel(EUpgrades.ParryDuplication)
+
+					if dupeLevel > 0 then
+						local totalProjectiles = 1 + dupeLevel
+						local angleStep = 360 / totalProjectiles
+						local baseOffset = 90
+
+						local baseCF = CFrame.lookAt(Vector3.zero, baseDirection)
+
+						for i = 0, totalProjectiles - 1 do
+							local angle = baseOffset + (i * angleStep)
+							local rotCF = baseCF * CFrame.Angles(0, math.rad(angle), 0)
+							directions[#directions + 1] = rotCF.LookVector
+						end
+					else
+						directions[#directions + 1] = baseDirection
+					end
+					local firstDir = directions[1]
+
+					if finalTarget then World:set(entity, Components.Target, finalTarget) end
+					World:set(entity, Components.Direction, firstDir)
 					World:set(entity, Components.Speed, speed * speedMult)
 
 					local impactPos = closestPointOnPath
-					World:set(entity, Components.CFrame, CFrame.new(impactPos + (camLook * 3)))
+					World:set(entity, Components.CFrame, CFrame.new(impactPos + (firstDir * 2)))
 
 					local model = World:get(entity, Components.Model) :: Projectile
 					if model then
@@ -644,6 +664,22 @@ RunService.Heartbeat:Connect(function(rawDt: number)
 						model.Sphere.Root.Glow.Color = SENDER_PLAYER_EFFECT_COLOR
 						model.Sphere.Root.Sparks.Color = SENDER_PLAYER_EFFECT_COLOR
 						model.Sphere.Root.Trail.Color = SENDER_PLAYER_EFFECT_COLOR
+					end
+
+					for i = 2, #directions do
+						local dir = directions[i]
+						local duplicateStartPos = impactPos + (dir * 2)
+
+						ProjectileController.AddProjectileMissile(
+							duplicateStartPos,
+							dir,
+							finalTarget,
+							speed * speedMult,
+							radius,
+							ProjectileController.ESender.Player,
+							World:get(entity, Components.Damage) or 1,
+							1
+						)
 					end
 
 					ParryController.SuccessfulParry()

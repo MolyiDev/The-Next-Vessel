@@ -38,7 +38,7 @@ return function(): HotbarUIReturn
 			Name = "Container",
 			AnchorPoint = Vector2.new(0.5, 1),
 			BackgroundTransparency = 1,
-			Position = UDim2.fromScale(0.5, 0.99),
+			Position = UDim2.fromScale(0.5, 0.97),
 			Size = UDim2.fromScale(0.375, 0.225),
 
 			create("UIListLayout")({

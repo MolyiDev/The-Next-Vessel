@@ -7,6 +7,7 @@ local Workspace = game:GetService("Workspace")
 local BossRagdollController = require(script.Parent.Parent.Controllers.BossController.BossRagdollController)
 local BlackoutController = require(script.Parent.Parent.Controllers.BlackoutController)
 local CameraController = require(script.Parent.Parent.Controllers.CameraController)
+local EnemiesController = require(script.Parent.Parent.Controllers.EnemiesController)
 local BossController = require(script.Parent.Parent.Controllers.BossController)
 local BossSpawnController = require(script.Parent.Parent.Controllers.BossController.BossSpawnController)
 local HealthController = require(script.Parent.Parent.Controllers.HealthController)
@@ -58,6 +59,8 @@ function Scene_Third.Start()
 	Scene_Third.CurrentPromise = Promise.new(function(resolve)
 		TorchesController.LightAll(true)
 		TweensController.SetImmobile(true)
+		EnemiesController.Cleanup()
+
 		resolve()
 	end)
 		:andThen(function()
@@ -131,14 +134,6 @@ function Scene_Third.Start()
 			return DialogueController.Talk({ Id = ECharacters.Hero, Dialogue = EDialogue.Third_Hero_6 })
 		end)
 		:andThen(function()
-			if Scene_Third.Whispers then
-				local tween = TweenService:Create(Scene_Third.Whispers, TWEEN_INFO, { Volume = 0 })
-				tween.Completed:Once(function()
-					if Scene_Third.Whispers then Scene_Third.Whispers:Destroy() end
-				end)
-				tween:Play()
-			end
-
 			FlamesController.Appear(EFlames.RedFlame)
 			return DialogueController.Talk({ Id = ECharacters.DemonGod, Dialogue = EDialogue.Third_DemonGod_1 })
 		end)
@@ -168,6 +163,14 @@ function Scene_Third.Start()
 			return Promise.delay(0.75)
 		end)
 		:andThen(function()
+			if Scene_Third.Whispers then
+				local tween = TweenService:Create(Scene_Third.Whispers, TWEEN_INFO, { Volume = 0 })
+				tween.Completed:Once(function()
+					if Scene_Third.Whispers then Scene_Third.Whispers:Destroy() end
+				end)
+				tween:Play()
+			end
+
 			HealthController.Revive()
 			Scene_Third.ShouldRestart = true
 			return Promise.delay(1)
@@ -221,8 +224,8 @@ function Scene_Third.Start()
 
 					local character = Player.Character :: TCharacter.TCharacter
 					if character then
-						local secondSpawn = CollectionService:GetTagged("SecondSpawn")[1] :: Attachment
-						if secondSpawn then character.HumanoidRootPart.CFrame = secondSpawn.WorldCFrame end
+						local spawn = CollectionService:GetTagged("Spawn")[1] :: Attachment
+						if spawn then character.HumanoidRootPart.CFrame = spawn.WorldCFrame end
 
 						if character then character.Wings.Transparency = 1 end
 					end

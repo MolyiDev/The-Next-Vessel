@@ -12,9 +12,6 @@ local RAGDOLL_INSTANCE_NAMES = {
 local BossRagdollController = {}
 BossRagdollController.IsRagdoll = false
 
-local Character: TCharacter.TCharacter = BossController.GetRig()
-local Humanoid: Humanoid? = BossController.GetRig():WaitForChild("Humanoid") :: Humanoid
-
 local function CreateColliderPart(part: BasePart)
 	if not part then return end
 
@@ -33,10 +30,8 @@ local function CreateColliderPart(part: BasePart)
 	collider.Parent = part
 end
 
-local function ReplaceJoints()
-	if not Character then return end
-
-	for _, motor in ipairs(Character:GetDescendants()) do
+local function ReplaceJoints(character: TCharacter.TCharacter)
+	for _, motor in ipairs(character:GetDescendants()) do
 		if not motor:IsA("Motor6D") then continue end
 
 		motor.Enabled = false
@@ -77,10 +72,8 @@ local function ReplaceJoints()
 	end
 end
 
-local function ResetJoints()
-	if not Character then return end
-
-	for _, instance in ipairs(Character:GetDescendants()) do
+local function ResetJoints(character: TCharacter.TCharacter)
+	for _, instance in ipairs(character:GetDescendants()) do
 		if RAGDOLL_INSTANCE_NAMES[instance.Name] then
 			instance:Destroy()
 		elseif instance:IsA("Motor6D") then
@@ -90,25 +83,33 @@ local function ResetJoints()
 end
 
 function BossRagdollController.Ragdoll()
-	if BossRagdollController.IsRagdoll or not Humanoid then return end
+	if BossRagdollController.IsRagdoll then return end
+	local character = BossController.GetRig()
+	if not character then return end
+	local humanoid = character:FindFirstChild("Humanoid") :: Humanoid
+	if not humanoid then return end
 
 	BossRagdollController.IsRagdoll = true
 
-	Humanoid:ChangeState(Enum.HumanoidStateType.Physics)
+	humanoid:ChangeState(Enum.HumanoidStateType.Physics)
 
-	ReplaceJoints()
+	ReplaceJoints(character)
 
-	if Character then Character:SetAttribute("LastRag", os.clock()) end
+	if character then character:SetAttribute("LastRag", os.clock()) end
 end
 
 function BossRagdollController.Unragdoll()
-	if not BossRagdollController.IsRagdoll or not Humanoid then return end
+	if not BossRagdollController.IsRagdoll then return end
+	local character = BossController.GetRig()
+	if not character then return end
+	local humanoid = character:FindFirstChild("Humanoid") :: Humanoid
+	if not humanoid then return end
 
 	BossRagdollController.IsRagdoll = false
 
-	Humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
+	humanoid:ChangeState(Enum.HumanoidStateType.GettingUp)
 
-	ResetJoints()
+	ResetJoints(character)
 end
 
 return Ignis.Register(BossRagdollController)

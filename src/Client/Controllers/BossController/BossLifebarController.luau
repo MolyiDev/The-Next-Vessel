@@ -25,14 +25,9 @@ function BossLifebarController.Disappear()
 	UI.Disappear()
 end
 
-BossController.OnDamaged:Connect(function(_, new, amount)
+BossController.OnDamaged:Connect(function(_, new)
 	-- TODO: Make a sound.
 	UI.SetCurrentHealth(new)
-	FloatingNumbersController.Add(
-		BossController.GetPosition(),
-		amount,
-		FloatingNumbersController.ENumberType.DamageEnemy
-	)
 end)
 
 BossController.OnHealed:Connect(function(_, new, amount)

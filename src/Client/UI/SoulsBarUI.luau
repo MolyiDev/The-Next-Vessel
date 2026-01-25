@@ -16,9 +16,12 @@ local TOTAL_KEYPOINT_COUNT = FILL_KEYPOINT_COUNT + 2 -- 9
 local rainbowConnection: RBXScriptConnection?
 local gradientChanging: { [UIGradient]: RBXScriptConnection } = {}
 
-export type TLevelBarUI = {
+export type SoulsBarUI = {
 	SetXP: (xp: number, maxXp: number) -> (),
 	SetRainbow: (value: boolean) -> (),
+	SetTextLevelUp: (value: boolean) -> (),
+	Appear: () -> (),
+	Dissapear: () -> (),
 }
 
 function createBarGradient(percentage: number, fillColors: { Color3 }, emptyColor: Color3)
@@ -118,7 +121,7 @@ function tweenGradient(
 	gradientChanging[gradient] = connection
 end
 
-function LevelBarUI(parent: PlayerGui | Frame)
+function SoulsBarUI(parent: PlayerGui | Frame)
 	local screenGui = Tools.CreateGenericScreenGui("LevelBarUI")
 
 	local container = Instance.new("Frame")
@@ -181,6 +184,9 @@ function LevelBarUI(parent: PlayerGui | Frame)
 
 			tweenGradient(gradient, TWEEN_INFO, finalGradient, nil)
 		end,
+		SetTextLevelUp = function()
+			--
+		end,
 		SetRainbow = function(value: boolean)
 			if value then
 				if rainbowConnection then return end
@@ -215,7 +221,7 @@ function LevelBarUI(parent: PlayerGui | Frame)
 				tweenGradient(gradient, TWEEN_INFO, currentXPGradient, nil)
 			end
 		end,
-	} :: TLevelBarUI
+	} :: SoulsBarUI
 end
 
-return LevelBarUI
+return SoulsBarUI

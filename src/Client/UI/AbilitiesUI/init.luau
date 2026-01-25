@@ -178,7 +178,7 @@ return function(): AbilitiesUIReturn
 			Name = "Container",
 			AnchorPoint = Vector2.new(0, 1),
 			BackgroundTransparency = 1,
-			Position = UDim2.fromScale(0.005, 0.991),
+			Position = UDim2.fromScale(0.005, 0.975),
 			Size = UDim2.fromScale(0.065, 0.116),
 
 			create("UIListLayout")({

@@ -3,7 +3,6 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
-local TimeController = require(script.Parent.TimeController)
 local jecs = require(ReplicatedStorage.Packages.jecs)
 local Components = require(ReplicatedStorage.Shared.ECS.Components)
 local Tags = require(ReplicatedStorage.Shared.ECS.Tags)
@@ -149,6 +148,7 @@ function TargetController.SwitchToNextTarget(oldTarget: jecs.Entity)
 	if bestEntity then
 		CurrentTargetEntity = bestEntity
 		SelectionStartTime = os.clock()
+		TargetController.Appear()
 	else
 		TargetController.OnTargetDestroyed()
 	end
@@ -263,17 +263,13 @@ local function UpdateReticleVisuals(reticle: Reticle, entity: jecs.Entity, dt: n
 	end
 end
 
-local function targetSystem(rawDt: number)
-	local dt = TimeController.GetDeltaTime(rawDt)
-
+local function targetSystem(dt: number)
 	if math.abs(CurrentTransparency - TargetTransparency) > 0.001 then
 		CurrentTransparency = CurrentTransparency
 			+ (TargetTransparency - CurrentTransparency) * math.min(dt * FADE_SPEED, 1)
 	else
 		CurrentTransparency = TargetTransparency
 	end
-
-	if dt <= 0.001 then return end
 
 	debug.profilebegin("Target")
 

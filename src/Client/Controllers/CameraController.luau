@@ -8,6 +8,7 @@ local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local jecs = require(ReplicatedStorage.Packages.jecs)
 local Components = require(ReplicatedStorage.Shared.ECS.Components)
 local World = require(ReplicatedStorage.Shared.ECS.Worlds.World)
+local Promise = require(ReplicatedStorage.Shared.Utils.Promise)
 local ECameraFovs = require(ReplicatedStorage.Types.Enums.ECameraFovs)
 local TCharacter = require(ReplicatedStorage.Types.TCharacter)
 
@@ -65,6 +66,12 @@ function CameraController.DisableCinematicCamera()
 	CameraController.LockCamera()
 	Camera.CameraSubject = if Player.Character then Player.Character:FindFirstChild("Torso") else nil
 	CameraController.CinematicCameraActive = false
+end
+
+function CameraController.FlyTowardsCharacter()
+	return Promise.new(function()
+		--
+	end)
 end
 
 function CameraController.ToggleCameraLock()
@@ -143,8 +150,8 @@ CameraController.OnCharacterAdded = function(character: TCharacter.TCharacter, c
 
 	Humanoid.AutoRotate = false
 
-	local firstSpawn = CollectionService:GetTagged("SecondSpawn")[1] :: Attachment
-	if firstSpawn then HumanoidRootPart.CFrame = firstSpawn.WorldCFrame end
+	local spawn = CollectionService:GetTagged("Spawn")[1] :: Attachment
+	if spawn then HumanoidRootPart.CFrame = spawn.WorldCFrame end
 
 	Camera.FieldOfView = ECameraFovs.Default
 	Camera.CameraSubject = character.Torso

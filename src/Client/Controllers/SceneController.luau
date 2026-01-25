@@ -2,9 +2,11 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
+local Workspace = game:GetService("Workspace")
 local BossController = require(script.Parent.BossController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local Signal = require(ReplicatedStorage.Packages.Signal)
+local Promise = require(ReplicatedStorage.Shared.Utils.Promise)
 local ELocations = require(ReplicatedStorage.Types.Enums.ELocations)
 local EScenes = require(ReplicatedStorage.Types.Enums.EScenes)
 local EUpgrades = require(ReplicatedStorage.Types.Enums.EUpgrades)
@@ -95,7 +97,9 @@ SceneController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 	end
 
 	-- The game has not started.
+	local cameraSpawn = CollectionService:GetTagged("CameraSpawn")[1] :: BasePart
 	CameraController.EnableCinematicCamera()
+	Workspace.CurrentCamera.CameraSubject = cameraSpawn
 	TweensController.SetImmobile(true, 0.01)
 
 	InputBeganConnection = UserInputService.InputBegan:Connect(function(input, gp)
@@ -106,16 +110,20 @@ SceneController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 			InputBeganConnection = nil
 		end
 
-		startCharacter(character)
-		SceneController.OnGameStarted:Fire()
+		-- TODO: Make the camera fly towards the character
+		Promise.new(function(resolve, _, onCancel)
+			startCharacter(character)
+			SceneController.OnGameStarted:Fire()
 
-		-- Test
-		UpgradesController.AddUpgrade(EUpgrades.Dash)
-		UpgradesController.AddUpgrade(EUpgrades.Parry)
-		SceneController.LoadScene(EScenes.Second)
+			-- Test
+			UpgradesController.AddUpgrade(EUpgrades.Dash)
+			UpgradesController.AddUpgrade(EUpgrades.Parry)
+			UpgradesController.AddUpgrade(EUpgrades.TargetGod)
+			SceneController.LoadScene(EScenes.Second)
 
-		-- Normal
-		-- SceneController.LoadScene(EScenes.First)
+			-- Normal
+			-- SceneController.LoadScene(EScenes.First)
+		end)
 	end)
 end
 
@@ -134,13 +142,8 @@ HealthController.OnRevived:Connect(function()
 	local character = Player.Character :: TCharacter.TCharacter
 	if not character then return end
 
-	if SceneController.CurrentScene < EScenes.Second then
-		local firstSpawn = CollectionService:GetTagged("FirstSpawn")[1] :: Attachment
-		if firstSpawn then character.HumanoidRootPart.CFrame = firstSpawn.WorldCFrame end
-	else
-		local secondSpawn = CollectionService:GetTagged("SecondSpawn")[1] :: Attachment
-		if secondSpawn then character.HumanoidRootPart.CFrame = secondSpawn.WorldCFrame end
-	end
+	local spawn = CollectionService:GetTagged("Spawn")[1] :: Attachment
+	if spawn then character.HumanoidRootPart.CFrame = spawn.WorldCFrame end
 
 	TeleportController.Teleport(ELocations.Dungeon)
 end)

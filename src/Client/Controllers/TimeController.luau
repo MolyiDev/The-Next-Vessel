@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local StarterPlayer = game:GetService("StarterPlayer")
 local Workspace = game:GetService("Workspace")
+local TweensController = require(script.Parent.TweensController)
 local TimerUI = require(StarterPlayer.StarterPlayerScripts.Client.UI.TimerUI)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local Signal = require(ReplicatedStorage.Packages.Signal)
@@ -20,6 +21,7 @@ TimeController.Timer = 0
 TimeController.Checkpoint = 0
 TimeController.IsBossVulnerable = false
 TimeController.Paused = true
+TimeController.GameplayPaused = false
 
 local targetTimeScale = 1
 local startScale = 1
@@ -51,12 +53,14 @@ RunService.Heartbeat:Connect(function(dt)
 
 	if TimeController.Paused then return end
 
-	local delta = dt * TimeController.TimeScale
-	TimeController.Timer += delta
+	if not TimeController.GameplayPaused then
+		local delta = dt * TimeController.TimeScale
+		TimeController.Timer += delta
 
-	local currentMinute = math.floor(TimeController.Timer / 60)
-	if currentMinute > math.floor(TimeController.Checkpoint / 60) then
-		TimeController.Checkpoint = currentMinute * 60
+		local currentMinute = math.floor(TimeController.Timer / 60)
+		if currentMinute > math.floor(TimeController.Checkpoint / 60) then
+			TimeController.Checkpoint = currentMinute * 60
+		end
 	end
 
 	TimeController.IsBossVulnerable = TimeController.Timer >= 300
@@ -71,6 +75,16 @@ function TimeController.PauseTimer()
 	TimeController.Paused = true
 end
 
+function TimeController.SetGameplayPaused(paused: boolean)
+	if paused then
+		TweensController.SetImmobile(true)
+	else
+		TweensController.SetImmobile(false)
+	end
+
+	TimeController.GameplayPaused = paused
+end
+
 function TimeController.AppearTimer()
 	UI.Appear()
 end
@@ -83,6 +97,7 @@ function TimeController.ResetTimer()
 	TimeController.Timer = TimeController.Checkpoint
 	UI.SetTime(TimeController.Checkpoint)
 	TimeController.Paused = true
+	TimeController.GameplayPaused = false
 end
 
 function TimeController.TweenTimeScale(target: number, duration: number?)
@@ -102,6 +117,7 @@ function TimeController.TweenTimeScale(target: number, duration: number?)
 end
 
 function TimeController.GetDeltaTime(dt: number)
+	if TimeController.GameplayPaused then return 0 end
 	return dt * TimeController.TimeScale
 end
 

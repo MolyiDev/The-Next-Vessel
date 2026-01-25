@@ -1,6 +1,7 @@
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local StarterPlayer = game:GetService("StarterPlayer")
+local CameraController = require(script.Parent.CameraController)
 local Signal = require(ReplicatedStorage.Packages.Signal)
 local HealthController = require(script.Parent.HealthController)
 local MouseController = require(script.Parent.MouseController)
@@ -20,8 +21,8 @@ local UPGRADE_SCALING = {
 	[EUpgrades.Health] = { Type = "Flat", Amount = 10 },
 	[EUpgrades.Projectiles] = { Type = "Flat", Amount = 1 },
 	[EUpgrades.Bounces] = { Type = "Flat", Amount = 1 },
-	[EUpgrades.SlowTime] = { Type = "Percent", Amount = 0.10 },
 	[EUpgrades.ProjectilesRegen] = { Type = "Percent", Amount = 0.10 },
+	[EUpgrades.ParryDuplication] = { Type = "Flat", Amount = 1 },
 }
 
 local UPGRADES_NAME = {
@@ -34,6 +35,7 @@ local UPGRADES_NAME = {
 	[EUpgrades.Parry] = "Parry",
 	[EUpgrades.Bounces] = "Bounces",
 	[EUpgrades.TargetGod] = "Target God",
+	[EUpgrades.ParryDuplication] = "Parry Duplication",
 }
 
 local UPGRADES_DESCRIPTION = {
@@ -43,10 +45,10 @@ local UPGRADES_DESCRIPTION = {
 	[EUpgrades.Projectiles] = "Increases the amount of projectiles you regenerate per cycle.\n<font color='#FFA500'>Amount:</font> %s",
 	[EUpgrades.ProjectilesRegen] = "Reduces the time it takes to regenerate projectiles.\n<font color='#00FFFF'>Cooldown:</font> %s",
 	[EUpgrades.Bounces] = "Attacks bounce to nearby enemies.\n<font color='#FFA500'>Bounces:</font> %s",
-	[EUpgrades.SlowTime] = "Slows down enemies and projectiles.\n<font color='#00FFFF'>Duration:</font> %s",
 	[EUpgrades.Dash] = "Unlocks <font color='#00FFFF'><b>Dash [Q]</b></font>.\nDash to become <b>invulnerable</b>. Move through projectiles to capture them.",
 	[EUpgrades.DashGod] = "Allows you to change direction while dashing.",
 	[EUpgrades.Parry] = "Unlocks <font color='#00FFFF'><b>Parry [Right Click]</b></font>.\nReflect damage back at enemies.",
+	[EUpgrades.ParryDuplication] = "Parrying creates copies of the projectile.\n<font color='#FFA500'>Extra Projectiles:</font> %s",
 }
 
 local UPGRADES_IMAGES = {
@@ -58,35 +60,23 @@ local UPGRADES_IMAGES = {
 	[EUpgrades.Dash] = EAssets.DashIcon,
 	[EUpgrades.DashGod] = EAssets.DashGodIcon,
 	[EUpgrades.Parry] = EAssets.ParryIcon,
-	[EUpgrades.SlowTime] = EAssets.SlowTimeIcon,
 	[EUpgrades.TargetGod] = EAssets.TargetGodIcon,
+	[EUpgrades.ParryDuplication] = EAssets.ParryIcon,
 }
 
 local STACKABLE_UPGRADES = {
 	[EUpgrades.Power] = true,
 	[EUpgrades.Health] = true,
-	[EUpgrades.SlowTime] = true,
 	[EUpgrades.Bounces] = true,
 	[EUpgrades.Projectiles] = true,
 	[EUpgrades.ProjectilesRegen] = true,
-}
-
-local UPGRADES_LIST = {
-	EUpgrades.Power,
-	EUpgrades.Health,
-	EUpgrades.Projectiles,
-	EUpgrades.ProjectilesRegen,
-	EUpgrades.Bounces,
-	EUpgrades.Dash,
-	EUpgrades.DashGod,
-	EUpgrades.Parry,
-	EUpgrades.SlowTime,
-	EUpgrades.TargetGod,
+	[EUpgrades.ParryDuplication] = true,
 }
 
 local UPGRADE_DEPENDENCIES = {
 	[EUpgrades.DashGod] = EUpgrades.Dash,
 	[EUpgrades.Bounces] = EUpgrades.TargetGod,
+	[EUpgrades.ParryDuplication] = EUpgrades.Parry,
 }
 
 local UPGRADES_RARITIES = {
@@ -98,8 +88,8 @@ local UPGRADES_RARITIES = {
 	[EUpgrades.Dash] = ERarity.Uncommon,
 	[EUpgrades.Parry] = ERarity.Uncommon,
 	[EUpgrades.DashGod] = ERarity.Rare,
-	[EUpgrades.SlowTime] = ERarity.Epic,
 	[EUpgrades.TargetGod] = ERarity.Epic,
+	[EUpgrades.ParryDuplication] = ERarity.Epic,
 }
 
 local RARITY_COLORS = {
@@ -155,7 +145,7 @@ local function fillUpgrades(inputUpgrades: { number }?): { number }
 
 	local candidates = {}
 
-	for _, upgradeId in UPGRADES_LIST do
+	for _, upgradeId in pairs(EUpgrades) do
 		if table.find(result, upgradeId) then continue end
 
 		local requiredUpgrade = UPGRADE_DEPENDENCIES[upgradeId]
@@ -196,6 +186,7 @@ end
 
 function UpgradesController.Show(upgrades: { number }?, fill: boolean?): Promise.Promise
 	if CurrentPromise then CurrentPromise:cancel() end
+	CameraController.UnlockCamera()
 	MouseController.ShowMouse()
 
 	local upgradesList: { number }

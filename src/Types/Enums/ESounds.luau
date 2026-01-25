@@ -11,4 +11,6 @@ return table.freeze({
 	MagicCharge = 9,
 	MagicShootBig = 10,
 	Whispers = 11,
+	ReadyLevelUp = 12,
+	LevelUp = 13,
 })
