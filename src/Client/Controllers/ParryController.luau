@@ -12,7 +12,7 @@ local UpgradesController = require(script.Parent.UpgradesController)
 
 local FULL_CHARGE_TIME = 3.0
 local PARRY_DURATION = 0.25
-local PARRY_COOLDOWN = 0.2
+local PARRY_COOLDOWN = 0.35
 
 local BASE_MULTIPLIER = 1.1
 local MAX_MULTIPLIER = 2.5
@@ -85,6 +85,7 @@ end)
 
 UserInputService.InputEnded:Connect(function(input, gp)
 	if gp or input.UserInputType ~= Enum.UserInputType.MouseButton2 then return end
+	if TweensController.IsImmobile or HealthController.IsDead() then return end
 	if not UpgradesController.HasUpgrade(EUpgrades.Parry) then return end
 
 	if ChargeTask then

@@ -23,7 +23,7 @@ local FADE_SPEED = 10
 local Player = Players.LocalPlayer
 local Camera = Workspace.CurrentCamera
 
-local ArrowsContainer = Tools.CreateGenericScreenGui("DamageNumbers")
+local ArrowsContainer = Tools.CreateGenericScreenGui("TargetUI")
 ArrowsContainer.DisplayOrder = -1
 ArrowsContainer.Parent = Player:WaitForChild("PlayerGui")
 
@@ -88,7 +88,7 @@ local function CreateReticle(name: string, color: Color3): Reticle
 	}
 end
 
-local SelectedReticle = CreateReticle("SelectedReticle", Color3.fromRGB(255, 50, 50))
+local SelectedReticle = CreateReticle("SelectedReticle", Color3.fromRGB(95, 89, 255))
 local HoverReticle = CreateReticle("HoverReticle", Color3.fromRGB(255, 255, 255))
 
 --==[ Controller ]==--

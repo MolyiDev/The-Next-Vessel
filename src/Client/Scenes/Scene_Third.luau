@@ -8,6 +8,7 @@ local BossRagdollController = require(script.Parent.Parent.Controllers.BossContr
 local BlackoutController = require(script.Parent.Parent.Controllers.BlackoutController)
 local CameraController = require(script.Parent.Parent.Controllers.CameraController)
 local EnemiesController = require(script.Parent.Parent.Controllers.EnemiesController)
+local LevelsController = require(script.Parent.Parent.Controllers.LevelsController)
 local BossController = require(script.Parent.Parent.Controllers.BossController)
 local BossSpawnController = require(script.Parent.Parent.Controllers.BossController.BossSpawnController)
 local HealthController = require(script.Parent.Parent.Controllers.HealthController)
@@ -51,6 +52,8 @@ Scene_Third.Corruption = 0
 
 function Scene_Third.Start()
 	HealthController.Revive()
+	LevelsController.Disappear()
+	LevelsController.CanLevelUp = false
 	BossController.ParryEnabled = false
 
 	Scene_Third.IsActive = true
@@ -207,6 +210,7 @@ function Scene_Third.Start()
 				end)
 		end)
 		:andThen(function()
+			BlackoutController.Text("Years later...")
 			return BlackoutController.Transparency(0)
 				:andThen(function()
 					CameraController.AutoRotate = false
@@ -230,7 +234,7 @@ function Scene_Third.Start()
 						if character then character.Wings.Transparency = 1 end
 					end
 
-					return Promise.delay(1)
+					return Promise.delay(3)
 				end)
 				:andThen(function()
 					return BlackoutController.Transparency(1):andThen(function()
@@ -277,6 +281,7 @@ function Scene_Third.Start()
 			})
 		end)
 		:andThen(function()
+			BlackoutController.Text("The end")
 			BlackoutController.Transparency(0)
 				:andThen(function()
 					Promise.delay(1)

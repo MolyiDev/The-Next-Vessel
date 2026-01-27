@@ -2,6 +2,7 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
 local Workspace = game:GetService("Workspace")
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
@@ -45,6 +46,7 @@ local CameraController = {}
 CameraController.AutoRotate = false
 CameraController.CameraLocked = false
 CameraController.CinematicCameraActive = false
+CameraController.IsFlying = false
 CameraController.ShakeMultiplier = 1
 
 function CameraController.LockCamera()
@@ -68,9 +70,29 @@ function CameraController.DisableCinematicCamera()
 	CameraController.CinematicCameraActive = false
 end
 
-function CameraController.FlyTowardsCharacter()
-	return Promise.new(function()
-		--
+function CameraController.FlyTowardsCharacter(character: TCharacter.TCharacter)
+	return Promise.new(function(resolve)
+		local rootPart = character.HumanoidRootPart
+		if not rootPart then
+			resolve()
+			return
+		end
+
+		CameraController.IsFlying = true
+
+		local targetCFrame = rootPart.CFrame * (CAMERA_OFFSET + Vector3.new(0, 0, 10))
+		local tweenInfo = TweenInfo.new(1.25, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut)
+
+		local tween = TweenService:Create(Camera, tweenInfo, { CFrame = targetCFrame })
+
+		tween.Completed:Once(function()
+			CameraController.DisableCinematicCamera()
+			task.wait()
+			CameraController.IsFlying = false
+			resolve()
+		end)
+
+		tween:Play()
 	end)
 end
 
@@ -164,6 +186,11 @@ CameraController.OnCharacterAdded = function(character: TCharacter.TCharacter, c
 		UserInputService.MouseBehavior = if CameraController.CameraLocked
 			then Enum.MouseBehavior.LockCenter
 			else Enum.MouseBehavior.Default
+
+		if CameraController.IsFlying then
+			if Camera.CameraType ~= Enum.CameraType.Scriptable then Camera.CameraType = Enum.CameraType.Scriptable end
+			return
+		end
 
 		if CameraController.CinematicCameraActive then
 			if Camera.CameraType ~= Enum.CameraType.Scriptable then Camera.CameraType = Enum.CameraType.Scriptable end

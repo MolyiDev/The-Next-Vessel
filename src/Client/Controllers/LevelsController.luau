@@ -7,12 +7,14 @@ local CameraController = require(script.Parent.CameraController)
 local Ignis = require(ReplicatedStorage.Packages.Ignis)
 local ESounds = require(ReplicatedStorage.Types.Enums.ESounds)
 local EnemiesController = require(script.Parent.EnemiesController)
+local HealthController = require(script.Parent.HealthController)
 local SoundsController = require(script.Parent.SoundsController)
 local UpgradesController = require(script.Parent.UpgradesController)
 local TimeController = require(script.Parent.TimeController)
 local SoulsBarUI = require(StarterPlayer.StarterPlayerScripts.Client.UI.SoulsBarUI)
 
 local LevelsController = {}
+LevelsController.CanLevelUp = true
 LevelsController.CurrentSouls = 0
 LevelsController.NeededSouls = 15
 LevelsController.Level = 1
@@ -44,11 +46,13 @@ function LevelsController.LevelUp()
 		CameraController.LockCamera()
 
 		UI.SetRainbow(false)
+		UI.SetTextLevelUp(false)
 		UpdateUI()
 
 		if LevelsController.CurrentSouls >= LevelsController.NeededSouls then
 			LevelsController.IsReadyToLevelUp = true
 			UI.SetRainbow(true)
+			UI.SetTextLevelUp(true)
 		end
 	end)
 end
@@ -60,6 +64,7 @@ function LevelsController.AddSoul()
 		if not LevelsController.IsReadyToLevelUp then
 			LevelsController.IsReadyToLevelUp = true
 			UI.SetRainbow(true)
+			UI.SetTextLevelUp(true)
 			SoundsController.PlayCharacter(ESounds.ReadyLevelUp)
 		end
 	else
@@ -67,12 +72,21 @@ function LevelsController.AddSoul()
 	end
 end
 
+function LevelsController.Appear()
+	UI.Appear()
+end
+
+function LevelsController.Disappear()
+	UI.Disappear()
+end
+
 UserInputService.InputBegan:Connect(function(input, gp)
 	if gp then return end
+	if input.KeyCode ~= Enum.KeyCode.X then return end
+	if not LevelsController.CanLevelUp then return end
+	if HealthController.IsDead() then return end
 
-	if input.KeyCode == Enum.KeyCode.X then
-		if LevelsController.IsReadyToLevelUp and not TimeController.GameplayPaused then LevelsController.LevelUp() end
-	end
+	if LevelsController.IsReadyToLevelUp and not TimeController.GameplayPaused then LevelsController.LevelUp() end
 end)
 
 EnemiesController.OnEnemyDied:Connect(LevelsController.AddSoul)

@@ -7,6 +7,7 @@ local BAR_COLOR = Color3.new(0.1, 0.1, 0.1)
 local BAR_GAP = 0.001
 local RAINBOW_SPEED = 0.4
 local TWEEN_INFO = TweenInfo.new(0.6, Enum.EasingStyle.Sine, Enum.EasingDirection.Out)
+local FADE_INFO = TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
 local XP_COLOR = Color3.new(0, 0.5, 1)
 
 local RAINBOW_BASE_TIMES = { 0, 1 / 6, 2 / 6, 3 / 6, 4 / 6, 5 / 6, 1 }
@@ -21,7 +22,7 @@ export type SoulsBarUI = {
 	SetRainbow: (value: boolean) -> (),
 	SetTextLevelUp: (value: boolean) -> (),
 	Appear: () -> (),
-	Dissapear: () -> (),
+	Disappear: () -> (),
 }
 
 function createBarGradient(percentage: number, fillColors: { Color3 }, emptyColor: Color3)
@@ -124,23 +125,54 @@ end
 function SoulsBarUI(parent: PlayerGui | Frame)
 	local screenGui = Tools.CreateGenericScreenGui("LevelBarUI")
 
-	local container = Instance.new("Frame")
-	container.AnchorPoint = Vector2.new(0.5, 1)
-	container.Position = UDim2.fromScale(0.5, 1)
-	container.Size = UDim2.fromScale(1, 0.01)
-	container.Parent = screenGui
+	local levelBar = Instance.new("Frame")
+	levelBar.Name = "SoulsBar"
+	levelBar.AnchorPoint = Vector2.new(0.5, 1)
+	levelBar.Position = UDim2.fromScale(0.5, 1)
+	levelBar.Size = UDim2.fromScale(1, 0.01)
+	levelBar.BackgroundTransparency = 1
+	levelBar.Parent = screenGui
 
 	local gradient = Instance.new("UIGradient")
 	gradient.Color = GRADIENT_COLOR_EMPTY
-	gradient.Parent = container
+	gradient.Parent = levelBar
 
 	local stroke = Instance.new("UIStroke")
 	stroke.LineJoinMode = Enum.LineJoinMode.Miter
 	stroke.StrokeSizingMode = Enum.StrokeSizingMode.ScaledSize
 	stroke.Thickness = 0.25
-	stroke.Parent = container
+	stroke.Transparency = 1
+	stroke.Parent = levelBar
+
+	local xFrame = Instance.new("Frame")
+	xFrame.Name = "X"
+	xFrame.AnchorPoint = Vector2.new(1, 1)
+	xFrame.BackgroundTransparency = 1
+	xFrame.Position = UDim2.fromScale(0.994786, 0.980741)
+	xFrame.Size = UDim2.fromScale(0.3, 0.035)
+	xFrame.Parent = screenGui
+
+	local textLabel = Instance.new("TextLabel")
+	textLabel.Name = "TextLabel"
+	textLabel.AnchorPoint = Vector2.new(1, 1)
+	textLabel.BackgroundTransparency = 1
+	textLabel.FontFace = Font.new("rbxassetid://12187371840", Enum.FontWeight.Bold, Enum.FontStyle.Normal)
+	textLabel.Position = UDim2.fromScale(1, 1)
+	textLabel.RichText = true
+	textLabel.Size = UDim2.fromScale(1, 1)
+	textLabel.Text = "[X] to SACRIFICE Souls"
+	textLabel.TextColor3 = Color3.new(1, 1, 1)
+	textLabel.TextScaled = true
+	textLabel.TextStrokeTransparency = 1
+	textLabel.TextTransparency = 1
+	textLabel.TextXAlignment = Enum.TextXAlignment.Right
+	textLabel.Parent = xFrame
 
 	screenGui.Parent = parent
+
+	-- State tracking
+	local isUiVisible = false
+	local isTextActive = false
 
 	local rainbowTime = 0
 	local currentXPGradient = GRADIENT_COLOR_EMPTY
@@ -168,6 +200,15 @@ function SoulsBarUI(parent: PlayerGui | Frame)
 		end)
 	end
 
+	local function updateTextState()
+		local targetTransparency = (isUiVisible and isTextActive) and 0 or 1
+
+		TweenService:Create(textLabel, FADE_INFO, {
+			TextTransparency = targetTransparency,
+			TextStrokeTransparency = targetTransparency,
+		}):Play()
+	end
+
 	return {
 		SetXP = function(xp: number, maxXp: number)
 			if rainbowConnection then
@@ -184,9 +225,30 @@ function SoulsBarUI(parent: PlayerGui | Frame)
 
 			tweenGradient(gradient, TWEEN_INFO, finalGradient, nil)
 		end,
-		SetTextLevelUp = function()
-			--
+
+		SetTextLevelUp = function(value)
+			isTextActive = value
+			updateTextState()
 		end,
+
+		Appear = function()
+			isUiVisible = true
+
+			TweenService:Create(levelBar, FADE_INFO, { BackgroundTransparency = 0 }):Play()
+			TweenService:Create(stroke, FADE_INFO, { Transparency = 0 }):Play()
+
+			updateTextState()
+		end,
+
+		Disappear = function()
+			isUiVisible = false
+
+			TweenService:Create(levelBar, FADE_INFO, { BackgroundTransparency = 1 }):Play()
+			TweenService:Create(stroke, FADE_INFO, { Transparency = 1 }):Play()
+
+			updateTextState() -- This will force text to hide because isUiVisible is now false
+		end,
+
 		SetRainbow = function(value: boolean)
 			if value then
 				if rainbowConnection then return end

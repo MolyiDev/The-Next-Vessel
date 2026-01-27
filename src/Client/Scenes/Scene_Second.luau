@@ -4,6 +4,7 @@ local Signal = require(ReplicatedStorage.Packages.Signal)
 local TargetController = require(script.Parent.Parent.Controllers.TargetController)
 local TimeController = require(script.Parent.Parent.Controllers.TimeController)
 local AbilitiesController = require(script.Parent.Parent.Controllers.AbilitiesController)
+local LevelsController = require(script.Parent.Parent.Controllers.LevelsController)
 local EnemiesController = require(script.Parent.Parent.Controllers.EnemiesController)
 local HotbarController = require(script.Parent.Parent.Controllers.HotbarController)
 local BossSpawnController = require(script.Parent.Parent.Controllers.BossController.BossSpawnController)
@@ -54,7 +55,9 @@ function Scene_Second.Start()
 	AbilitiesController.Appear()
 	BossLifebarController.Appear()
 	TargetController.Appear()
+	LevelsController.Appear()
 	TimeController.AppearTimer()
+	BossSpawnController.Enabled = true
 
 	Scene_Second.IsActive = true
 	Scene_Second.ShouldRestart = true
@@ -106,44 +109,70 @@ function Scene_Second.Start()
 					if thread then task.cancel(thread) end
 				end
 
-				thread = task.spawn(function()
-					local directionCount = 20
-					local angleStep = (math.pi * 2) / directionCount
-					local angleOffset = angleStep / 2
+				BossSpawnController.Enabled = true
 
+				thread = task.spawn(function()
 					while true do
+						local currentMinute = math.floor(TimeController.Timer / 60)
+						local directionCount = 20
+						local spawnOrigins = { SpawnLowPos }
+
+						if currentMinute == 0 then
+							directionCount = 18
+						elseif currentMinute == 1 then
+							directionCount = 22
+						elseif currentMinute == 2 then
+							directionCount = 26
+						elseif currentMinute == 3 then
+							directionCount = 30
+							spawnOrigins[#spawnOrigins + 1] = SpawnHighPos
+						elseif currentMinute == 4 then
+							directionCount = 36
+							spawnOrigins[#spawnOrigins + 1] = SpawnHighPos
+						elseif currentMinute >= 5 then
+							directionCount = 42
+							spawnOrigins[#spawnOrigins + 1] = SpawnHighPos
+						end
+
+						local angleStep = (math.pi * 2) / directionCount
+						local angleOffset = angleStep / 2
+
 						task.wait(1)
 
-						for i = 1, directionCount do
-							local currentAngle = angleStep * i
-							local direction = Vector3.new(math.cos(currentAngle), 0, math.sin(currentAngle))
+						for _, origin in spawnOrigins do
+							for i = 1, directionCount do
+								local currentAngle = angleStep * i
+								local direction = Vector3.new(math.cos(currentAngle), 0, math.sin(currentAngle))
 
-							ProjectileController.AddProjectile(
-								SpawnLowPos,
-								((SpawnLowPos + direction) - SpawnLowPos).Unit,
-								90,
-								2.5,
-								ProjectileController.ESender.Enemy,
-								5,
-								math.random(2, 6)
-							)
+								ProjectileController.AddProjectile(
+									origin,
+									((origin + direction) - origin).Unit,
+									90,
+									2.5,
+									ProjectileController.ESender.Enemy,
+									5,
+									math.random(2, 6)
+								)
+							end
 						end
 
 						task.wait(1)
 
-						for i = 1, directionCount do
-							local currentAngle = angleStep * i + angleOffset
-							local direction = Vector3.new(math.cos(currentAngle), 0, math.sin(currentAngle))
+						for _, origin in spawnOrigins do
+							for i = 1, directionCount do
+								local currentAngle = angleStep * i + angleOffset
+								local direction = Vector3.new(math.cos(currentAngle), 0, math.sin(currentAngle))
 
-							ProjectileController.AddProjectile(
-								SpawnLowPos,
-								((SpawnLowPos + direction) - SpawnLowPos).Unit,
-								90,
-								2.5,
-								ProjectileController.ESender.Enemy,
-								5,
-								math.random(2, 6)
-							)
+								ProjectileController.AddProjectile(
+									origin,
+									((origin + direction) - origin).Unit,
+									90,
+									2.5,
+									ProjectileController.ESender.Enemy,
+									5,
+									math.random(2, 6)
+								)
+							end
 						end
 
 						task.wait(1)
@@ -180,11 +209,13 @@ function Scene_Second.Start()
 			BossLifebarController.Disappear()
 			HotbarController.Disappear()
 			AbilitiesController.Disappear()
+			LevelsController.Disappear()
 			TimeController.DisappearTimer()
 
 			return TeleportController.Teleport(ELocations.SoulRealm):andThen(function()
 				ProjectileController.Cleanup()
 				EnemiesController.Cleanup()
+				TimeController.SetGameplayPaused(false)
 
 				return Promise.delay(0.5)
 			end)
@@ -226,12 +257,14 @@ function Scene_Second.Stop()
 	Scene_Second.ShouldRestart = true
 	Scene_Second.SelectedUpgrade = nil
 
+	BossSpawnController.Enabled = false
 	DoorsController.Close(0)
 	TorchesController.UnlightAll(0)
 	FlamesController.Dissapear()
 	HotbarController.Disappear()
 	BossLifebarController.Disappear()
 	AbilitiesController.Disappear()
+	LevelsController.Disappear()
 	TimeController.DisappearTimer()
 	TargetController.Disappear()
 	Scene_Second.Corruption = math.min(Scene_Second.Corruption + 1, 5)

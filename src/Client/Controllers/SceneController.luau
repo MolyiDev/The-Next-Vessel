@@ -11,6 +11,7 @@ local ELocations = require(ReplicatedStorage.Types.Enums.ELocations)
 local EScenes = require(ReplicatedStorage.Types.Enums.EScenes)
 local EUpgrades = require(ReplicatedStorage.Types.Enums.EUpgrades)
 local CameraController = require(script.Parent.CameraController)
+local DoorsController = require(script.Parent.DoorsController)
 local EnemiesController = require(script.Parent.EnemiesController)
 local HealthController = require(script.Parent.HealthController)
 local MouseController = require(script.Parent.MouseController)
@@ -100,7 +101,7 @@ SceneController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 	local cameraSpawn = CollectionService:GetTagged("CameraSpawn")[1] :: BasePart
 	CameraController.EnableCinematicCamera()
 	Workspace.CurrentCamera.CameraSubject = cameraSpawn
-	TweensController.SetImmobile(true, 0.01)
+	TweensController.SetImmobile(true)
 
 	InputBeganConnection = UserInputService.InputBegan:Connect(function(input, gp)
 		if gp or input.KeyCode ~= Enum.KeyCode.F then return end
@@ -110,20 +111,30 @@ SceneController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 			InputBeganConnection = nil
 		end
 
-		-- TODO: Make the camera fly towards the character
-		Promise.new(function(resolve, _, onCancel)
-			startCharacter(character)
+		Promise.new(function(resolve)
 			SceneController.OnGameStarted:Fire()
+			DoorsController.Open()
 
-			-- Test
-			UpgradesController.AddUpgrade(EUpgrades.Dash)
-			UpgradesController.AddUpgrade(EUpgrades.Parry)
-			UpgradesController.AddUpgrade(EUpgrades.TargetGod)
-			SceneController.LoadScene(EScenes.Second)
-
-			-- Normal
-			-- SceneController.LoadScene(EScenes.First)
+			CameraController.FlyTowardsCharacter(character):andThen(function()
+				resolve()
+			end)
 		end)
+			:andThen(function()
+				return Promise.delay(0.5)
+			end)
+			:andThen(function()
+				startCharacter(character)
+
+				-- Test
+				-- UpgradesController.AddUpgrade(EUpgrades.Dash)
+				-- UpgradesController.AddUpgrade(EUpgrades.Parry)
+				-- UpgradesController.AddUpgrade(EUpgrades.TargetGod)
+				-- SceneController.LoadScene(EScenes.Second)
+
+				-- Normal
+				UpgradesController.AddUpgrade(EUpgrades.TargetGod)
+				SceneController.LoadScene(EScenes.First)
+			end)
 	end)
 end
 

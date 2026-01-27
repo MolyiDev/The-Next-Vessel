@@ -96,8 +96,6 @@ end
 function TimeController.ResetTimer()
 	TimeController.Timer = TimeController.Checkpoint
 	UI.SetTime(TimeController.Checkpoint)
-	TimeController.Paused = true
-	TimeController.GameplayPaused = false
 end
 
 function TimeController.TweenTimeScale(target: number, duration: number?)

@@ -13,17 +13,31 @@ local BlackoutController = {}
 local screenGui = Tools.CreateGenericScreenGui("Teleport")
 screenGui.DisplayOrder = -1
 
-local blockFrame = Instance.new("Frame")
+local blockFrame = Instance.new("CanvasGroup")
 blockFrame.Size = UDim2.fromScale(1, 1)
 blockFrame.BackgroundColor3 = Color3.new()
-blockFrame.Transparency = 1
+blockFrame.GroupTransparency = 1
 blockFrame.Parent = screenGui
+
+local blockText = Instance.new("TextLabel")
+blockText.Position = UDim2.fromScale(0.5, 0.5)
+blockText.Size = UDim2.fromScale(0.5, 0.2)
+blockText.BackgroundColor3 = Color3.new()
+blockText.BackgroundTransparency = 1
+blockText.FontFace = Font.new("rbxasset://fonts/families/Fondamento.json")
+blockText.TextScaled = true
+blockText.RichText = true
+blockText.Text = ""
+blockText.TextColor3 = Color3.new(1, 1, 1)
+blockText.TextStrokeTransparency = 0
+blockText.AnchorPoint = Vector2.new(0.5, 0.5)
+blockText.Parent = blockFrame
 
 screenGui.Parent = Player:WaitForChild("PlayerGui") :: PlayerGui
 
 local function tweenPromise(transparency: number)
 	return Promise.new(function(resolve, _, onCancel)
-		local tween = TweenService:Create(blockFrame, TWEEN_INFO, { Transparency = transparency })
+		local tween = TweenService:Create(blockFrame, TWEEN_INFO, { GroupTransparency = transparency })
 		tween:Play()
 
 		local conn
@@ -35,13 +49,17 @@ local function tweenPromise(transparency: number)
 		onCancel(function()
 			if conn then conn:Disconnect() end
 			tween:Cancel()
-			blockFrame.Transparency = 1
+			blockFrame.GroupTransparency = 1
 		end)
 	end)
 end
 
 function BlackoutController.Transparency(transparency: number)
 	return tweenPromise(transparency)
+end
+
+function BlackoutController.Text(text: string)
+	blockText.Text = text
 end
 
 return BlackoutController

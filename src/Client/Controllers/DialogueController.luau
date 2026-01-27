@@ -3,6 +3,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 local StarterPlayer = game:GetService("StarterPlayer")
 local UserInputService = game:GetService("UserInputService")
+
 local DialogueUI = require(StarterPlayer.StarterPlayerScripts.Client.UI.DialogueUI)
 local Butler = require(ReplicatedStorage.Packages.Butler)
 local Fluid = require(ReplicatedStorage.Shared.Utils.Fluid)
@@ -161,12 +162,16 @@ function Dialogue.Talk(dialogue: Dialogue): Promise.Promise
 		end)
 
 		local cleanText, commands = ParseRichText(dialogue.Dialogue)
-		refs.Text.Text = cleanText
+
+		-- FIX: Strip ALL tags to get the true "visible" length for the loop
+		local visibleText = string.gsub(cleanText, "<[^>]+>", "")
+		local totalGraphemes = utf8.len(visibleText) :: number
+
+		refs.Text.Text = cleanText -- Assign the rich text to the label
 
 		UI.Appear()
 		task.wait(FADE_TIME)
 
-		local totalGraphemes = utf8.len(cleanText) :: number
 		local currentGrapheme = 0
 		local currentSpeed = BASE_SPEED
 		local currentPitch = BASE_PITCH
@@ -203,6 +208,7 @@ function Dialogue.Talk(dialogue: Dialogue): Promise.Promise
 			refs.Text.MaxVisibleGraphemes = currentGrapheme
 			local sound = dialogue.Sound or charData.Sound
 
+			-- Sound logic is fine, but now it only runs for visible characters
 			if sound and currentGrapheme % 2 == 0 then
 				local s = sound:Clone()
 				s.Parent = UI.UI

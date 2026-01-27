@@ -136,7 +136,10 @@ function BossSpawnController.HandleSpawning()
 end
 
 RunService.Heartbeat:Connect(function()
-	if not TimeController.Paused and TimeController.Timer >= nextSpawnTime then BossSpawnController.HandleSpawning() end
+	if not BossSpawnController.Enabled then return end
+	if not TimeController.GameplayPaused and not TimeController.Paused and TimeController.Timer >= nextSpawnTime then
+		BossSpawnController.HandleSpawning()
+	end
 end)
 
 return BossSpawnController

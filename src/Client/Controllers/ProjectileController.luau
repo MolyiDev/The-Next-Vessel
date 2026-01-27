@@ -47,7 +47,7 @@ type SpellBreak = {
 } & Attachment
 
 local PARRY_STRENGTH = 10
-local MAX_PROJECTILES = 80
+local MAX_PROJECTILES = 100
 local SENDER_PLAYER_SPHERE_COLOR = Color3.fromRGB(1, 122, 173)
 local SENDER_PLAYER_EFFECT_COLOR = ColorSequence.new(Color3.fromRGB(12, 255, 239))
 
@@ -63,7 +63,7 @@ local Camera = Workspace.CurrentCamera
 local ProjectileModel = ReplicatedStorage:WaitForChild("Models"):WaitForChild("Projectile") :: Projectile
 local ProjectileBreakEffect = ReplicatedStorage:WaitForChild("Effects"):WaitForChild("SpellBreak") :: SpellBreak
 local ProjectilesZone = CollectionService:GetTagged("ProjectilesZone")[1] :: BasePart
-local ProjectilePool = ObjectPooler.new(ProjectileModel, 80, 1, ObjectPooler.ReturnBoneModel, Workspace.Projectiles)
+local ProjectilePool = ObjectPooler.new(ProjectileModel, 110, 10, ObjectPooler.ReturnBoneModel, Workspace.Projectiles)
 
 local RayParams = RaycastParams.new()
 RayParams.FilterType = Enum.RaycastFilterType.Exclude
