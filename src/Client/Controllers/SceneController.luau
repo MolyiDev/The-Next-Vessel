@@ -133,7 +133,10 @@ SceneController.OnCharacterAdded = function(character: TCharacter.TCharacter)
 
 				-- Normal
 				UpgradesController.AddUpgrade(EUpgrades.TargetGod)
-				SceneController.LoadScene(EScenes.First)
+				UpgradesController.AddUpgrade(EUpgrades.Parry)
+				UpgradesController.AddUpgrade(EUpgrades.Dash)
+				UpgradesController.AddUpgrade(EUpgrades.DashGod)
+				SceneController.LoadScene(EScenes.Second)
 			end)
 	end)
 end
